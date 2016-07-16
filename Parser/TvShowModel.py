@@ -1,6 +1,7 @@
 from utils import *
 import keywords as k
 
+
 class TvShow:
 
     def __init__(self):
@@ -13,8 +14,7 @@ class TvShow:
         self._replicasLength_max = None
         self._replicasLength_med = None
         self._replicasLength_min = None
-        self._seasons = None
-        self._speakers = None
+        self._speakers = []
         self._title = None
 
 
@@ -25,21 +25,21 @@ class Season:
         self._acts = None
         self._configuration_density = None
         self._configuration_matrix = None
-        self._number_of_acts = None
+        self._number_of_episodes = None
         self._number_of_replicas = None
         self._replicasLength_avg = None
         self._replicasLength_max = None
         self._replicasLength_med = None
         self._replicasLength_min = None
         self._season_number = None
-        self._speakers = None
+        self._speakers = []
 
 
-class Act:
+class Episode:
 
     def __init__(self):
 
-        self._act_number = None
+        self._episode_number = None
         self._configuration_density = None
         self._configuration_matrix = None
         self._number_of_replicas = None
@@ -50,14 +50,14 @@ class Act:
         self._replicasLength_min = None
         self._scenes = None
         self._season_number = None
-        self._speakers = None
+        self._speakers = []
 
 
 class Scene:
 
     def __init__(self):
 
-        self._act_number = None
+        self._episode_number = None
         self._configuration_density = None
         self._configuration_matrix = None
         self._number_of_replicas = None
@@ -67,7 +67,22 @@ class Scene:
         self._replicasLength_min = None
         self._scene_number = None
         self._season_number = None
-        self._speakers = None
+        self._speakers = []
+
+    def get_json(self):
+        return {
+            k.EPISODE_NUMBER:self._episode_number,
+            k.CONFIGURATION_DENSITY: self._configuration_density,
+            k.CONFIGURATION_MATRIX: self._configuration_matrix,
+            k.NUMBER_OF_REPLICAS: self._number_of_replicas,
+            k.REPLICAS_LENGTH_AVERAGE: self._replicasLength_avg,
+            k.REPLICAS_LENGTH_MAX: self._replicasLength_max,
+            k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
+            k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
+            k.SCENE_NUMBER: self._scene_number,
+            k.SEASON_NUMBER:self._season_number,
+            k.SPEAKERS: self._speakers
+        }
 
 
 class Replik:
@@ -88,6 +103,17 @@ class Replik:
             k.EPISODE: self._episode_number,
             k.SEASON: self._season_number
         }
+
+
+class Speaker:
+    def __init__(self):
+
+        self._name = None
+        self._replicasLength_total = 0
+        self._replicasLength_avg = 0
+        self._replicasLength_max = 0
+        self._replicasLength_min = 0
+        self._replicasLength_med = 0
 
 
 class ConfigurationModel:

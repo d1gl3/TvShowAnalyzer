@@ -3,7 +3,7 @@ import re
 from ForeverDreamingParser import ForeverDreamingParser as Parser
 
 
-def parse_big_bang_theory():
+def parse_big_bang_theory_raw_html_to_repliks():
     raw_html_files = glob.glob('data/*.html')
     for html in raw_html_files:
         with open(html, "r") as f:
@@ -19,6 +19,8 @@ def parse_big_bang_theory():
 
             print episode_scenes
 
+def calculate_scene_stats():
+    pass
 
 if __name__ == "__main__":
-    parse_big_bang_theory()
+    parse_big_bang_theory_raw_html_to_repliks()
