@@ -1,0 +1,8 @@
+SPEAKER = 'speaker'
+REPLIK = 'replik'
+WORD_COUNT = 'word_count'
+BIG_BANG_THEORY = 'big_bang_theory'
+REPLIK_COLLECTION = 'replik_collection'
+SCENE = 'scene'
+EPISODE = 'episode'
+SEASON = 'season'
