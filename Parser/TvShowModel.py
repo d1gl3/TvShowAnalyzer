@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from utils import *
 import keywords as k
 
@@ -22,17 +24,34 @@ class Season:
 
     def __init__(self):
 
-        self._acts = None
+        self._replicasLength_total = None
         self._configuration_density = None
         self._configuration_matrix = None
         self._number_of_episodes = None
         self._number_of_replicas = None
+        self._number_of_speakers = None
         self._replicasLength_avg = None
         self._replicasLength_max = None
         self._replicasLength_med = None
         self._replicasLength_min = None
         self._season_number = None
         self._speakers = []
+
+    def get_json(self):
+        return {
+            k.CONFIGURATION_DENSITY: self._configuration_density,
+            k.CONFIGURATION_MATRIX: self._configuration_matrix,
+            k.NUMBER_OF_EPISODES: self._number_of_episodes,
+            k.NUMBER_OF_REPLICAS: self._number_of_replicas,
+            k.NUMBER_OF_SPEAKERS: self._number_of_speakers,
+            k.REPLICAS_LENGTH_TOTAL: self._replicasLength_total,
+            k.REPLICAS_LENGTH_AVERAGE: self._replicasLength_avg,
+            k.REPLICAS_LENGTH_MAX: self._replicasLength_max,
+            k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
+            k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
+            k.SEASON_NUMBER: self._season_number,
+            k.SPEAKERS: self._speakers
+        }
 
 
 class Episode:
@@ -48,7 +67,6 @@ class Episode:
         self._replicasLength_max = None
         self._replicasLength_med = None
         self._replicasLength_min = None
-        self._scenes = None
         self._season_number = None
         self._speakers = []
 
@@ -58,31 +76,54 @@ class Scene:
     def __init__(self):
 
         self._episode_number = None
-        self._configuration_density = None
-        self._configuration_matrix = None
-        self._number_of_replicas = None
-        self._replicasLength_avg = None
-        self._replicasLength_max = None
-        self._replicasLength_med = None
-        self._replicasLength_min = None
+        self._number_of_replicas = 0
+        self._number_of_speakers = 0
+        self._replicasLength_total = 0
+        self._replicasLength_avg = 0
+        self._replicasLength_max = 0
+        self._replicasLength_med = 0
+        self._replicasLength_min = 0
+        self._replicasLength_List = []
+
         self._scene_number = None
         self._season_number = None
         self._speakers = []
 
     def get_json(self):
         return {
-            k.EPISODE_NUMBER:self._episode_number,
-            k.CONFIGURATION_DENSITY: self._configuration_density,
-            k.CONFIGURATION_MATRIX: self._configuration_matrix,
+            k.EPISODE_NUMBER: self._episode_number,
             k.NUMBER_OF_REPLICAS: self._number_of_replicas,
+            k.NUMBER_OF_SPEAKERS: self._number_of_speakers,
             k.REPLICAS_LENGTH_AVERAGE: self._replicasLength_avg,
             k.REPLICAS_LENGTH_MAX: self._replicasLength_max,
             k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
             k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
+            k.REPLICAS_LENGTH_TOTAL: self._replicasLength_total,
             k.SCENE_NUMBER: self._scene_number,
             k.SEASON_NUMBER:self._season_number,
             k.SPEAKERS: self._speakers
         }
+
+    def add_speaker(self, speaker):
+        self._speakers.append(speaker)
+
+    def add_replica(self, replik_length):
+        self._replicasLength_List.append(replik_length)
+        self._number_of_replicas += 1
+        self._replicasLength_total += replik_length
+        self._replicasLength_avg = mean(self._replicasLength_List)
+        self._replicasLength_med = median(self._replicasLength_List)
+        self._replicasLength_max = max(self._replicasLength_List)
+        self._replicasLength_min = min(self._replicasLength_List)
+
+    def calculate_speaker_statistics(self):
+        speakers = deepcopy(self._speakers)
+        new_speakers = []
+        for speaker in speakers:
+            speaker[k.SCENE_WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(self._replicasLength_total)
+            speaker[k.SCENE_REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
+            new_speakers.append(speaker)
+        self._speakers = new_speakers
 
 
 class Replik:
@@ -99,21 +140,48 @@ class Replik:
             k.SPEAKER: self._speaker,
             k.REPLIK: self._replik,
             k.WORD_COUNT: self._replik_word_count,
-            k.SCENE: self._scene_number,
-            k.EPISODE: self._episode_number,
-            k.SEASON: self._season_number
+            k.SCENE_NUMBER: self._scene_number,
+            k.EPISODE_NUMBER: self._episode_number,
+            k.SEASON_NUMBER: self._season_number
         }
 
 
 class Speaker:
-    def __init__(self):
-
-        self._name = None
-        self._replicasLength_total = 0
+    def __init__(self, name):
+        self._name = name
+        self._number_of_replics = 0
+        self._number_of_words = 0
         self._replicasLength_avg = 0
+        self._replicasLength_List = []
         self._replicasLength_max = 0
-        self._replicasLength_min = 0
         self._replicasLength_med = 0
+        self._replicasLength_min = 0
+        self._replicasLength_total = 0
+        self._scene_replic_percentage = 0
+        self._scene_word_percentage = 0
+
+    def add_replica(self, replik_length):
+        self._replicasLength_List.append(replik_length)
+        self._number_of_replics += 1
+        self._replicasLength_total += replik_length
+        self._replicasLength_avg = mean(self._replicasLength_List)
+        self._replicasLength_med = median(self._replicasLength_List)
+        self._replicasLength_max = max(self._replicasLength_List)
+        self._replicasLength_min = min(self._replicasLength_List)
+
+    def get_json(self):
+        return {
+            k.NAME: self._name,
+            k.NUMBER_OF_REPLICAS: self._number_of_replics,
+            k.REPLICAS_LENGTH_AVERAGE: self._replicasLength_avg,
+            k.REPLICAS_LENGTH_TOTAL: self._replicasLength_total,
+            k.REPLICAS_LENGTH_MAX: self._replicasLength_max,
+            k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
+            k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
+            k.REPLICAS_LENGTH_LIST: self._replicasLength_List,
+            k.SCENE_REPLIK_PERCENTAGE: self._scene_replic_percentage,
+            k.SCENE_WORD_PERCENTAGE: self._scene_word_percentage
+        }
 
 
 class ConfigurationModel:

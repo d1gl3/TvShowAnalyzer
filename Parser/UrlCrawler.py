@@ -1,5 +1,6 @@
 import requests
 
+# Download URLs, manually scraped from chrome console with javascript
 urls = [
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=8536&view=print",
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=8537&view=print",

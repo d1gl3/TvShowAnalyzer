@@ -9,15 +9,17 @@ class MyHTMLParser(HTMLParser):
 
     def __init__(self, season, episode):
         HTMLParser.__init__(self)
-        self.season = season
-        self.episode = episode
+
         self.mongo_db = MongoDBConnection()
-        self.out = {"0": []}
-        self.scene_count = 0
+
         self.con = self.mongo_db.get_con()
         self.db = self.mongo_db.get_db_by_name(k.BIG_BANG_THEORY)
+        self.episode = episode
+        self.out = {"0": []}
         self.replik_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
         self.scene_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
+        self.scene_count = 0
+        self.season = season
 
     def handle_data(self, data):
 
@@ -28,7 +30,7 @@ class MyHTMLParser(HTMLParser):
 
         # Regex to remove any king of quotation marks
 
-        # If html line starts with Scene, a new Scene is initialized
+        # If html line starts with Scene, a new Scene is initialized and stored in MongoDB
         if data.startswith("Scene:") or data.startswith("</hr>"):
             if "%s" % self.scene_count not in self.out:
                 self.out["%s" % self.scene_count] = []
@@ -41,26 +43,30 @@ class MyHTMLParser(HTMLParser):
             new_scene._episode_number = self.episode
             new_scene._season_number = self.season
 
-            #self.scene_coll.insert(new_scene)
+            self.scene_coll.insert(new_scene.get_json())
 
             return
 
         # Analyze Repliks
         if re.search(re_spoken, data) is not None:
 
+            # Try to split Speaker name from Replik value
             try:
                 speaker, replik = data.split(':', 1)
             except Exception, e:
                 print e
                 return
 
+            # Strip all unwanted characters from Speaker and Replik Value
             speaker = re.sub("\(.*", "", speaker.decode('utf-8'))
+            speaker = speaker.strip()
             replik = replik.decode('utf-8')
             replik = re.sub(re_quotation_marks, "", replik)
             replik = re.sub(re_alpha_numeric, "", replik)
 
             replik_word_count = len(replik.split())
 
+            # Initiate new Replik object and insert in MongoDB
             new_replik = Replik()
             new_replik._speaker = speaker
             new_replik._replik = replik
@@ -69,8 +75,7 @@ class MyHTMLParser(HTMLParser):
             new_replik._episode_number = self.episode
             new_replik._season_number = self.season
 
-
-            self.out["%s" % self.scene_count][k.REPLIKS].append(new_replik)
+            #self.out["%s" % self.scene_count][k.REPLIKS].append(new_replik)
             self.replik_coll.insert(new_replik.get_json())
 
 
@@ -82,13 +87,12 @@ class ForeverDreamingParser:
 
     def parse_html(self, html):
 
+        # Remove Strong Elements from html, to better recognize spoken passages by Regex
         html = html.replace("<strong>", "")
         html = html.replace("</strong>", "")
+
+        # Only process script body
         html = html.split('<hr class="sep" />')[-2]
 
         parser = MyHTMLParser(self.season, self.episode)
         parser.feed(html)
-
-        scenes = parser.out
-
-        return scenes
