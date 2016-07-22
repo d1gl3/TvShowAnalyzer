@@ -1,6 +1,6 @@
 from ForeverDreamingParser import ForeverDreamingParser as Parser
 from MongoDB.MongoDBConnection import MongoDBConnection
-from TvShowModel import Season, Scene, Speaker
+from TvShowModel import Season, Scene, Speaker, Episode
 import glob
 import re
 import keywords as k
@@ -8,8 +8,10 @@ from utils import *
 
 mongo_db = MongoDBConnection()
 seasons = []
+episodes = []
 season_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SEASON_COLLECTION)
 scene_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
+episode_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.EPISODE_COLLECTION)
 replik_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
 
 
@@ -34,6 +36,14 @@ def parse_big_bang_theory_raw_html_to_repliks():
                 season._season_number = season_number
                 season_coll.insert_one(season.get_json())
 
+            # Create Episode object in database
+            if "%sx%s" % (season_number, episode_number) not in episodes:
+                episodes.append("%sx%s" % (season_number, episode_number))
+                episode = Episode()
+                episode._season_number = season_number
+                episode._episode_number = episode_number
+                episode_coll.insert_one(episode.get_json())
+
             # Parse Episode HTML, saves Repliks and Scenes to MongoDB
             parser = Parser(season_number, episode_number)
             parser.parse_html(html)
@@ -42,6 +52,8 @@ def parse_big_bang_theory_raw_html_to_repliks():
 # Calculation of the scene stats
 def calculate_scene_stats():
     scenes = scene_coll.find({})
+
+    scenes = list(scenes)
 
     for old_scene in scenes:
 
@@ -89,13 +101,50 @@ def calculate_scene_stats():
             scene.add_speaker(value.get_json())
 
         scene.calculate_speaker_statistics()
+        scene.calculate_replica_statistics()
 
         # Update Scene data in MongoDB
-        scene_coll.update({'_id': _id}, scene.get_json())
+        #scene_coll.update({'_id': _id}, scene.get_json())
 
 
+def calculate_episode_stats():
+    episodes = episode_coll.find({})
 
+    for old_episode in episodes:
+        _id = old_episode['_id']
+
+        _speakers = {}
+
+        updated_episode = Episode()
+        _season_number = old_episode["season_number"]
+        _episode_number = old_episode["episode_number"]
+
+        updated_episode._season_number = _season_number
+        updated_episode._episode_number = _episode_number
+
+        # Find all replicas for this scene
+        scenes = scene_coll.find(
+            {
+                "season_number": _season_number,
+                "episode_number": _episode_number
+            }
+        )
+
+        scenes = list(scenes)
+
+        for scene in scenes:
+            updated_episode.add_scene(scene)
+
+            scene_speakers = scene[k.SPEAKERS]
+
+            for speaker in scene_speakers:
+                updated_episode.add_speaker(speaker)
+
+        updated_episode.calculate_replica_statistics()
+        updated_episode.calculate_speaker_statistics()
+        print updated_episode
 
 if __name__ == "__main__":
     #parse_big_bang_theory_raw_html_to_repliks()
     calculate_scene_stats()
+    calculate_episode_stats()

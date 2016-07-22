@@ -58,17 +58,79 @@ class Episode:
 
     def __init__(self):
 
-        self._episode_number = None
         self._configuration_density = None
         self._configuration_matrix = None
-        self._number_of_replicas = None
-        self._number_of_scenes = None
-        self._replicasLength_avg = None
-        self._replicasLength_max = None
-        self._replicasLength_med = None
-        self._replicasLength_min = None
+        self._episode_number = None
+        self._number_of_replicas = 0
+        self._number_of_scenes = 0
+        self._replicasLength_avg = 0
+        self._replicasLength_List = []
+        self._replicasLength_max = 0
+        self._replicasLength_med = 0
+        self._replicasLength_min = 0
+        self._replicasLength_total = 0
         self._season_number = None
         self._speakers = []
+
+    def get_json(self):
+        return {
+            k.EPISODE_NUMBER: self._episode_number,
+            k.CONFIGURATION_DENSITY: self._configuration_density,
+            k.CONFIGURATION_MATRIX: self._configuration_matrix,
+            k.NUMBER_OF_REPLICAS: self._number_of_replicas,
+            k.NUMBER_OF_SCENES: self._number_of_scenes,
+            k.REPLICAS_LENGTH_AVERAGE: self._replicasLength_avg,
+            k.REPLICAS_LENGTH_MAX: self._replicasLength_max,
+            k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
+            k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
+            k.REPLICAS_LENGTH_TOTAL: self._replicasLength_total,
+            k.REPLICAS_LENGTH_LIST: self._replicasLength_List,
+            k.SEASON_NUMBER: self._season_number,
+            k.SPEAKERS: self._speakers
+        }
+
+    def add_speaker(self, speaker):
+        self._speakers.append(speaker)
+
+    def add_scene(self, scene):
+        self._number_of_scenes += 1
+        self._number_of_replicas += scene[k.NUMBER_OF_REPLICAS]
+        self._replicasLength_total += scene[k.REPLICAS_LENGTH_TOTAL]
+        self._replicasLength_List.extend(scene[k.REPLICAS_LENGTH_LIST])
+
+    def calculate_replica_statistics(self):
+        self._replicasLength_avg = mean(self._replicasLength_List)
+        self._replicasLength_med = median(self._replicasLength_List)
+        self._replicasLength_max = max(self._replicasLength_List)
+        self._replicasLength_min = min(self._replicasLength_List)
+
+    def calculate_speaker_statistics(self):
+        speakers = deepcopy(self._speakers)
+        new_speakers = []
+        new_speakers_dict = {}
+
+        for speaker in speakers:
+            if speaker[k.NAME] not in new_speakers_dict:
+                new_speakers_dict[speaker[k.NAME]] = speaker
+            else:
+                new_speakers_dict[speaker[k.NAME]][k.NUMBER_OF_REPLICAS] += speaker.get(k.NUMBER_OF_REPLICAS, 0)
+                old_replica_length_list = new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_LIST]
+                old_replica_length_list.extend(speaker.get(k.REPLICAS_LENGTH_LIST, 0))
+                new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_LIST] = old_replica_length_list
+                new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_TOTAL] += speaker.get(k.REPLICAS_LENGTH_TOTAL, 0)
+
+        speakers = [v for speaker, v in new_speakers_dict.iteritems()]
+
+        for speaker in speakers:
+            speaker[k.EPISODE_WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(
+                self._replicasLength_total)
+            speaker[k.EPISODE_REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
+            speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(speaker[k.REPLICAS_LENGTH_LIST])
+            speaker[k.REPLICAS_LENGTH_MEDIAN] = median(speaker[k.REPLICAS_LENGTH_LIST])
+            speaker[k.REPLICAS_LENGTH_MAX] = max(speaker[k.REPLICAS_LENGTH_LIST])
+            speaker[k.REPLICAS_LENGTH_MIN] = min(speaker[k.REPLICAS_LENGTH_LIST])
+            new_speakers.append(speaker)
+        self._speakers = new_speakers
 
 
 class Scene:
@@ -99,8 +161,9 @@ class Scene:
             k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
             k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
             k.REPLICAS_LENGTH_TOTAL: self._replicasLength_total,
+            k.REPLICAS_LENGTH_LIST: self._replicasLength_List,
             k.SCENE_NUMBER: self._scene_number,
-            k.SEASON_NUMBER:self._season_number,
+            k.SEASON_NUMBER: self._season_number,
             k.SPEAKERS: self._speakers
         }
 
@@ -111,10 +174,15 @@ class Scene:
         self._replicasLength_List.append(replik_length)
         self._number_of_replicas += 1
         self._replicasLength_total += replik_length
-        self._replicasLength_avg = mean(self._replicasLength_List)
-        self._replicasLength_med = median(self._replicasLength_List)
-        self._replicasLength_max = max(self._replicasLength_List)
-        self._replicasLength_min = min(self._replicasLength_List)
+
+    def calculate_replica_statistics(self):
+        if not self._replicasLength_List:
+            print self._season_number, self._episode_number, self._scene_number
+        else:
+            self._replicasLength_avg = mean(self._replicasLength_List)
+            self._replicasLength_med = median(self._replicasLength_List)
+            self._replicasLength_max = max(self._replicasLength_List)
+            self._replicasLength_min = min(self._replicasLength_List)
 
     def calculate_speaker_statistics(self):
         speakers = deepcopy(self._speakers)
@@ -122,6 +190,11 @@ class Scene:
         for speaker in speakers:
             speaker[k.SCENE_WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(self._replicasLength_total)
             speaker[k.SCENE_REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
+            if speaker[k.REPLICAS_LENGTH_LIST]:
+                speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(speaker[k.REPLICAS_LENGTH_LIST])
+                speaker[k.REPLICAS_LENGTH_MEDIAN] = median(speaker[k.REPLICAS_LENGTH_LIST])
+                speaker[k.REPLICAS_LENGTH_MAX] = max(speaker[k.REPLICAS_LENGTH_LIST])
+                speaker[k.REPLICAS_LENGTH_MIN] = min(speaker[k.REPLICAS_LENGTH_LIST])
             new_speakers.append(speaker)
         self._speakers = new_speakers
 
@@ -150,7 +223,6 @@ class Speaker:
     def __init__(self, name):
         self._name = name
         self._number_of_replics = 0
-        self._number_of_words = 0
         self._replicasLength_avg = 0
         self._replicasLength_List = []
         self._replicasLength_max = 0
@@ -164,10 +236,13 @@ class Speaker:
         self._replicasLength_List.append(replik_length)
         self._number_of_replics += 1
         self._replicasLength_total += replik_length
-        self._replicasLength_avg = mean(self._replicasLength_List)
-        self._replicasLength_med = median(self._replicasLength_List)
-        self._replicasLength_max = max(self._replicasLength_List)
-        self._replicasLength_min = min(self._replicasLength_List)
+
+    def calculate_replica_statistics(self):
+        if self._replicasLength_List:
+            self._replicasLength_avg = mean(self._replicasLength_List)
+            self._replicasLength_med = median(self._replicasLength_List)
+            self._replicasLength_max = max(self._replicasLength_List)
+            self._replicasLength_min = min(self._replicasLength_List)
 
     def get_json(self):
         return {
