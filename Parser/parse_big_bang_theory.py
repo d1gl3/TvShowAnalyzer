@@ -1,26 +1,32 @@
 from ForeverDreamingParser import ForeverDreamingParser as Parser
 from MongoDB.MongoDBConnection import MongoDBConnection
-from TvShowModel import Season, Scene, Speaker, Episode, TvShow
 import glob
 import re
 import keywords as k
-from utils import *
+from Parser.models.Episode import Episode
+from Parser.models.Scene import Scene
+from Parser.models.Season import Season
+from Parser.models.Speaker import Speaker
+from Parser.models.TvShow import TvShow
 
 mongo_db = MongoDBConnection()
-seasons = []
-episodes = []
 season_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SEASON_COLLECTION)
 scene_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
 episode_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.EPISODE_COLLECTION)
 replik_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
 tv_show_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.TV_SHOW_COLLECTION)
 
+
 def log(string):
     print "### " + string
+
 
 def parse_big_bang_theory_raw_html_to_repliks():
     # Read paths of html files in download folder
     log("Open HTML Files")
+
+    seasons = []
+    episodes = []
 
     raw_html_files = glob.glob('data/*.html')  # ["data/raw_html_0.html"]
     for html in raw_html_files:
@@ -63,7 +69,7 @@ def parse_big_bang_theory_raw_html_to_repliks():
                 log("Could not parse Season %s Episode %s" % (season_number, episode_number))
                 log("Reason: %s" % e.message)
 
-            log("Succesfully parsed Season %s Episode %s" %(season_number, episode_number))
+            log("Succesfully parsed Season %s Episode %s" % (season_number, episode_number))
 
 
 # Calculation of the scene stats
@@ -78,12 +84,12 @@ def calculate_scene_stats():
 
         scene = Scene()
 
-        _id = old_scene["_id"]
-        _scene_number = old_scene["scene_number"]
-        _season_number = old_scene["season_number"]
-        _episode_number = old_scene["episode_number"]
+        _id = old_scene.get("_id")
+        _scene_number = old_scene.get("scene_number")
+        _season_number = old_scene.get("season_number")
+        _episode_number = old_scene.get("episode_number")
 
-        log("Calculate Stats for Season %s Episode %s Scene %s" %(_season_number, _episode_number, _scene_number))
+        log("Calculate Stats for Season %s Episode %s Scene %s" % (_season_number, _episode_number, _scene_number))
 
         scene._scene_number = _scene_number
         scene._season_number = _season_number
@@ -139,7 +145,7 @@ def calculate_episode_stats():
         _season_number = old_episode["season_number"]
         _episode_number = old_episode["episode_number"]
 
-        log("Calculate Stats for Season %s Episode %s" %(_season_number, _episode_number))
+        log("Calculate Stats for Season %s Episode %s" % (_season_number, _episode_number))
 
         updated_episode._season_number = _season_number
         updated_episode._episode_number = _episode_number
@@ -182,9 +188,9 @@ def calculate_season_stats():
         updated_season = Season()
         updated_season._season_number = old_season[k.SEASON_NUMBER]
 
-        log("Calculate Stats for Season %s" % updated_season._season_number)
+        log("Calculate Stats for Season %s" % updated_season.season_number)
 
-        episodes = episode_coll.find({k.SEASON_NUMBER: updated_season._season_number})
+        episodes = episode_coll.find({k.SEASON_NUMBER: updated_season.season_number})
 
         for episode in episodes:
             updated_season.add_episode(episode)
@@ -201,6 +207,7 @@ def calculate_season_stats():
         updated_season.calculate_speaker_relations()
 
         season_coll.update({'_id': _id}, updated_season.get_json())
+
 
 def calculate_tv_show_stats():
     log("Start Calculation Of Tv Show Stats")
@@ -223,13 +230,10 @@ def calculate_tv_show_stats():
 
     tv_show_coll.insert(tv_show.get_json())
 
-def calculate_speaker_stats():
-    pass
-
 
 if __name__ == "__main__":
-    #parse_big_bang_theory_raw_html_to_repliks()
-    #calculate_scene_stats()
-    #calculate_episode_stats()
-    #calculate_season_stats()
+    parse_big_bang_theory_raw_html_to_repliks()
+    calculate_scene_stats()
+    calculate_episode_stats()
+    calculate_season_stats()
     calculate_tv_show_stats()

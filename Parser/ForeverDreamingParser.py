@@ -2,11 +2,11 @@ import re
 from HTMLParser import HTMLParser
 import keywords as k
 from MongoDB.MongoDBConnection import MongoDBConnection
-from Parser.TvShowModel import Replik, Scene, Speaker
+from Parser.models.Replik import Replik
+from Parser.models.Scene import Scene
 
 
 class MyHTMLParser(HTMLParser):
-
     def __init__(self, season, episode):
         HTMLParser.__init__(self)
 
@@ -24,10 +24,11 @@ class MyHTMLParser(HTMLParser):
 
     def handle_data(self, data):
 
-        re_spoken = re.compile(r'[A-Z]{1}[a-z]+\s?(\([\sA-Za-z0-9]*\))?:')  # Regex to find repliks
-        re_alpha_numeric = re.compile('[^a-zA-Z\s]')    # Regex to remove non alpha numeric characters
+        re_spoken = re.compile(r'[A-Z][a-z]+\s?(\([\sA-Za-z0-9]*\))?:')  # Regex to find repliks
+        re_alpha_numeric = re.compile('[^a-zA-Z\s]')  # Regex to remove non alpha numeric characters
         re_quotation_marks = re.compile(
-            ur'[\u0022\u0027\u00AB\u00BB\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F\u2039\u203A\u300C\u300D\u300E\u300F\u301D\u301E\u301F\uFE41\uFE42\uFE43\uFE44\uFF02\uFF07\uFF62\uFF63]+')
+            ur'[\u0022\u0027\u00AB\u00BB\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F\u2039'
+            ur'\u203A\u300C\u300D\u300E\u300F\u301D\u301E\u301F\uFE41\uFE42\uFE43\uFE44\uFF02\uFF07\uFF62\uFF63]+')
 
         # Regex to remove any king of quotation marks
 
@@ -76,7 +77,7 @@ class MyHTMLParser(HTMLParser):
             new_replik._episode_number = self.episode
             new_replik._season_number = self.season
 
-            #self.out["%s" % self.scene_count][k.REPLIKS].append(new_replik)
+            # self.out["%s" % self.scene_count][k.REPLIKS].append(new_replik)
             self.replik_coll.insert(new_replik.get_json())
             """
             try:
@@ -87,14 +88,13 @@ class MyHTMLParser(HTMLParser):
                 print e
             """
 
-class ForeverDreamingParser:
 
+class ForeverDreamingParser:
     def __init__(self, season, episode):
         self.season = season
         self.episode = episode
 
     def parse_html(self, html):
-
         # Remove Strong Elements from html, to better recognize spoken passages by Regex
         html = html.replace("<strong>", "")
         html = html.replace("</strong>", "")
