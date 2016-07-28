@@ -2,7 +2,7 @@ import re
 from HTMLParser import HTMLParser
 import keywords as k
 from MongoDB.MongoDBConnection import MongoDBConnection
-from Parser.TvShowModel import Replik, Scene
+from Parser.TvShowModel import Replik, Scene, Speaker
 
 
 class MyHTMLParser(HTMLParser):
@@ -18,6 +18,7 @@ class MyHTMLParser(HTMLParser):
         self.out = {"0": []}
         self.replik_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
         self.scene_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
+        self.speaker_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SPEAKER_COLLECTION)
         self.scene_count = 0
         self.season = season
 
@@ -77,7 +78,14 @@ class MyHTMLParser(HTMLParser):
 
             #self.out["%s" % self.scene_count][k.REPLIKS].append(new_replik)
             self.replik_coll.insert(new_replik.get_json())
-
+            """
+            try:
+                speaker_obj = Speaker(speaker)
+                speaker_obj._id = speaker
+                self.speaker_coll.insert(speaker_obj.get_json())
+            except Exception, e:
+                print e
+            """
 
 class ForeverDreamingParser:
 
