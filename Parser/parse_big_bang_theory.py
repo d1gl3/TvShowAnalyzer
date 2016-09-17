@@ -341,11 +341,11 @@ def calculate_speaker_word_lists():
 
 
 if __name__ == "__main__":
-    #parse_big_bang_theory_raw_html_to_repliks()
-    #calculate_scene_stats()
-    #calculate_episode_stats()
-    #calculate_season_stats()
-    #calculate_tv_show_stats()
-    #store_speakers_as_separate_objects()
+    parse_big_bang_theory_raw_html_to_repliks()
+    calculate_scene_stats()
+    calculate_episode_stats()
+    calculate_season_stats()
+    calculate_tv_show_stats()
+    store_speakers_as_separate_objects()
     calculate_speaker_word_lists()
     #  takes longer, execute separately
