@@ -9,23 +9,31 @@ class Speaker(BaseModel):
         self._name = name
 
     def add_replica(self, scene_number, episode_number, season_number, replik_length):
-        self._replicasLength_List.append(replik_length)
+        if replik_length in self._replicasLength_List:
+            self._replicasLength_List["_%s" % replik_length] += 1
+        else:
+            self._replicasLength_List["_%s" % replik_length] = 1
         self._number_of_replicas += 1
         self._replicasLength_total += replik_length
 
         if scene_number not in self._appeared_in_scenes:
-            self._appeared_in_scenes.append(scene_number)
+            self._appeared_in_scenes.append(int(scene_number))
         if episode_number not in self._appeared_in_episodes:
-            self._appeared_in_episodes.append(episode_number)
+            self._appeared_in_episodes.append(int(episode_number))
         if season_number not in self._appeared_in_seasons:
-            self._appeared_in_seasons.append(season_number)
+            self._appeared_in_seasons.append(int(season_number))
 
     def calculate_replica_statistics(self):
         if self._replicasLength_List:
-            self._replicasLength_avg = mean(self._replicasLength_List)
-            self._replicasLength_med = median(self._replicasLength_List)
-            self._replicasLength_max = max(self._replicasLength_List)
-            self._replicasLength_min = min(self._replicasLength_List)
+            lengths = []
+            for key, v in self._replicasLength_List.iteritems():
+                key = key[1:]
+                for i in range(v):
+                    lengths.append(key)
+            self._replicasLength_avg = mean(lengths)
+            self._replicasLength_med = median(lengths)
+            self._replicasLength_max = max(lengths)
+            self._replicasLength_min = min(lengths)
 
     def get_json(self):
         return {
@@ -41,6 +49,6 @@ class Speaker(BaseModel):
             k.REPLICAS_LENGTH_MIN: self._replicasLength_min,
             k.REPLICAS_LENGTH_MEDIAN: self._replicasLength_med,
             k.REPLICAS_LENGTH_LIST: self._replicasLength_List,
-            k.SCENE_REPLIK_PERCENTAGE: self._scene_replic_percentage,
-            k.SCENE_WORD_PERCENTAGE: self._scene_word_percentage
+            k.REPLIK_PERCENTAGE: self._scene_replic_percentage,
+            k.WORD_PERCENTAGE: self._scene_word_percentage
         }

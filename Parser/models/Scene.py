@@ -26,7 +26,10 @@ class Scene(BaseModel):
         }
 
     def add_replica(self, replik_length):
-        self._replicasLength_List.append(replik_length)
+        if replik_length in self._replicasLength_List:
+            self._replicasLength_List["_%s" % replik_length] += 1
+        else:
+            self._replicasLength_List["_%s" % replik_length] = 1
         self._number_of_replicas += 1
         self._replicasLength_total += replik_length
 
@@ -34,21 +37,33 @@ class Scene(BaseModel):
         if not self._replicasLength_List:
             print self._season_number, self._episode_number, self._scene_number
         else:
-            self._replicasLength_avg = mean(self._replicasLength_List)
-            self._replicasLength_med = median(self._replicasLength_List)
-            self._replicasLength_max = max(self._replicasLength_List)
-            self._replicasLength_min = min(self._replicasLength_List)
+            lengths = []
+            for key, v in self._replicasLength_List.iteritems():
+                key = key[1:]
+                for i in range(v):
+                    lengths.append(int(key))
+            self._replicasLength_avg = mean(lengths)
+            self._replicasLength_med = median(lengths)
+            self._replicasLength_max = max(lengths)
+            self._replicasLength_min = min(lengths)
 
     def calculate_speaker_statistics(self):
         speakers = deepcopy(self._speakers)
         new_speakers = []
         for speaker in speakers:
-            speaker[k.SCENE_WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(self._replicasLength_total)
-            speaker[k.SCENE_REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
+            speaker[k.WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(self._replicasLength_total)
+            speaker[k.REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
             if speaker[k.REPLICAS_LENGTH_LIST]:
-                speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(speaker[k.REPLICAS_LENGTH_LIST])
-                speaker[k.REPLICAS_LENGTH_MEDIAN] = median(speaker[k.REPLICAS_LENGTH_LIST])
-                speaker[k.REPLICAS_LENGTH_MAX] = max(speaker[k.REPLICAS_LENGTH_LIST])
-                speaker[k.REPLICAS_LENGTH_MIN] = min(speaker[k.REPLICAS_LENGTH_LIST])
+                lengths = []
+                for key, v in dict(speaker[k.REPLICAS_LENGTH_LIST]).iteritems():
+                    key = key[1:]
+                    for i in range(v):
+                        lengths.append(int(key))
+                speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(lengths)
+                speaker[k.REPLICAS_LENGTH_MEDIAN] = median(lengths)
+                speaker[k.REPLICAS_LENGTH_MAX] = max(lengths)
+                speaker[k.REPLICAS_LENGTH_MIN] = min(lengths)
             new_speakers.append(speaker)
+
         self._speakers = new_speakers
+

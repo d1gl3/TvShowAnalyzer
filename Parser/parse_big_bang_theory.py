@@ -2,18 +2,21 @@ from ForeverDreamingParser import ForeverDreamingParser as Parser
 from MongoDB.MongoDBConnection import MongoDBConnection
 import glob
 import re
+import nltk
 import keywords as k
 from Parser.models.Episode import Episode
 from Parser.models.Scene import Scene
 from Parser.models.Season import Season
 from Parser.models.Speaker import Speaker
 from Parser.models.TvShow import TvShow
+from Parser.utils import count_words_from_string, re_replace
 
 mongo_db = MongoDBConnection()
 season_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SEASON_COLLECTION)
 scene_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
 episode_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.EPISODE_COLLECTION)
 replik_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
+speaker_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SPEAKER_COLLECTION)
 tv_show_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.TV_SHOW_COLLECTION)
 
 
@@ -173,6 +176,7 @@ def calculate_episode_stats():
         updated_episode.calculate_configuration_matrix()
         updated_episode.calculate_configuration_density()
         updated_episode.calculate_speaker_relations()
+        updated_episode.calculate_force_related_graph_for_speakers()
 
         # Update Episode data in MongoDB
         episode_coll.update({'_id': _id}, updated_episode.get_json())
@@ -205,6 +209,11 @@ def calculate_season_stats():
         updated_season.calculate_configuration_matrix()
         updated_season.calculate_configuration_density()
         updated_season.calculate_speaker_relations()
+        episodes = episode_coll.find({k.SEASON_NUMBER:old_season[k.SEASON_NUMBER]})
+        updated_season.calculate_force_related_graph_for_speakers(episodes)
+
+        scenes = scene_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
+        updated_season.calculate_burst_chart_for_number_of_replicas(scenes)
 
         season_coll.update({'_id': _id}, updated_season.get_json())
 
@@ -213,7 +222,7 @@ def calculate_tv_show_stats():
     log("Start Calculation Of Tv Show Stats")
     seasons = season_coll.find({})
 
-    tv_show = TvShow()
+    tv_show = TvShow("the_big_bang_theory")
 
     for season in seasons:
         tv_show.add_season(season)
@@ -227,13 +236,116 @@ def calculate_tv_show_stats():
     tv_show.calculate_configuration_matrix()
     tv_show.calculate_configuration_density()
     tv_show.calculate_speaker_relations()
+    episodes = episode_coll.find({})
+    tv_show.calculate_force_related_graph_for_speakers(episodes)
 
     tv_show_coll.insert(tv_show.get_json())
 
 
+def store_speakers_as_separate_objects():
+    tv_show = tv_show_coll.find_one({})
+    speakers = tv_show.get(k.SPEAKERS)
+
+    for speaker in speakers:
+        speaker["_id"] = speaker["name"]
+
+        speaker_coll.insert(speaker)
+
+
+def calculate_speaker_word_lists():
+    speakers_cursor = speaker_coll.find({})
+
+    speakers = [speaker for speaker in speakers_cursor]
+
+    speaker_names = [speaker[k.NAME] for speaker in speakers]
+
+    for speaker in speakers:
+        #if speaker.get('word_cloud_data'):
+        #    continue
+        name = speaker[k.NAME]
+        string = ""
+
+        repliks = replik_coll.find({'speaker': name})
+
+        for replik in repliks:
+            string += replik['replik']
+
+        speaker_words, positive_words, negative_words, names, dist_word_count, noun_count, adverb_count, adjective_count, verb_count = count_words_from_string(string, speaker_names)
+
+        speaker_words['list'].sort(key=lambda row: row[1], reverse=True)
+        positive_words['list'].sort(key=lambda row: row[1], reverse=True)
+        negative_words['list'].sort(key=lambda row: row[1], reverse=True)
+        names['list'].sort(key=lambda row: row[1], reverse=True)
+
+        speaker_top_100_dict_list = []
+
+        for i in range(min([100, len(speaker_words["list"])])):
+            word = speaker_words["list"][i]
+
+            speaker_top_100_dict_list.append({
+                "text": word[0],
+                "weight": word[1]
+            })
+
+        speaker_top_100_pos_dict_list = []
+
+        for i in range(min([100, len(positive_words["list"])])):
+            word = positive_words["list"][i]
+
+            speaker_top_100_pos_dict_list.append({
+                "text": word[0],
+                "weight": word[1]
+            })
+
+        speaker_top_100_neg_dict_list = []
+
+        for i in range(min([100, len(negative_words["list"])])):
+            word = negative_words["list"][i]
+
+            speaker_top_100_neg_dict_list.append({
+                "text": word[0],
+                "weight": word[1]
+            })
+
+        speaker_top_5_name_dict_list = []
+
+        for i in range(min([5, len(names["list"])])):
+            name = names["list"][i]
+
+            speaker_top_100_neg_dict_list.append({
+                "text": name[0],
+                "weight": name[1]
+            })
+
+        speaker['word_cloud_data'] = speaker_top_100_dict_list
+        speaker['negative_words_cloud'] = speaker_top_100_neg_dict_list
+        speaker['positive_words_cloud'] = speaker_top_100_pos_dict_list
+        speaker['names_called'] = speaker_top_5_name_dict_list
+        speaker['dist_word_count'] = dist_word_count
+        speaker['noun_count'] = noun_count
+        speaker['verb_count'] = verb_count
+        speaker['adverb_count'] = adverb_count
+        speaker['adjective_count'] = adjective_count
+
+        if speaker_words["count"] != 0:
+            speaker['negative_words_percentage'] = negative_words["count"] / float(speaker_words["count"])
+            speaker['positive_words_percentage'] = positive_words["count"] / float(speaker_words["count"])
+
+        if speaker.get('negative_words_percentage') and speaker.get('positive_words_percentage'):
+            speaker['words_pos_ratio'] = float(speaker['positive_words_percentage']) / (float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
+            speaker['words_neg_ratio'] = float(speaker['negative_words_percentage']) / (float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
+
+        speaker["_id"] = speaker["name"]
+
+        speaker_coll.update({'_id': speaker["name"]}, speaker)
+
+
 if __name__ == "__main__":
-    parse_big_bang_theory_raw_html_to_repliks()
-    calculate_scene_stats()
-    calculate_episode_stats()
-    calculate_season_stats()
-    calculate_tv_show_stats()
+    #parse_big_bang_theory_raw_html_to_repliks()
+    #calculate_scene_stats()
+    #calculate_episode_stats()
+    #calculate_season_stats()
+    #calculate_tv_show_stats()
+    #store_speakers_as_separate_objects()
+    calculate_speaker_word_lists()
+    #  takes longer, execute separately

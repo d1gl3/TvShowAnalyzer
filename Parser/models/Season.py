@@ -1,4 +1,7 @@
 from copy import deepcopy
+
+import itertools
+
 from Parser.models.BaseModel import BaseModel
 from Parser.utils import *
 import keywords as k
@@ -13,6 +16,7 @@ class Season(BaseModel):
         return {
             k.CONFIGURATION_DENSITY: self._configuration_density,
             k.CONFIGURATION_MATRIX: self._configuration_matrix,
+            k.FORCE_DIRECTED_DATA: self._force_directed_data,
             k.NUMBER_OF_EPISODES: self._number_of_episodes,
             k.NUMBER_OF_REPLICAS: self._number_of_replicas,
             k.NUMBER_OF_SPEAKERS: self._number_of_speakers,
@@ -36,9 +40,16 @@ class Season(BaseModel):
                 new_speakers_dict[speaker[k.NAME]] = speaker
             else:
                 new_speakers_dict[speaker[k.NAME]][k.NUMBER_OF_REPLICAS] += speaker.get(k.NUMBER_OF_REPLICAS, 0)
+
                 old_replica_length_list = new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_LIST]
-                old_replica_length_list.extend(speaker.get(k.REPLICAS_LENGTH_LIST, 0))
+                for key, v in speaker[k.REPLICAS_LENGTH_LIST].iteritems():
+                    if key not in old_replica_length_list:
+                        old_replica_length_list[key] = v
+                    else:
+                        old_replica_length_list[key] += v
+
                 new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_LIST] = old_replica_length_list
+
                 new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_TOTAL] += speaker.get(k.REPLICAS_LENGTH_TOTAL, 0)
                 old_appeared_in_episode_list = new_speakers_dict[speaker[k.NAME]][k.APPEARED_IN_EPISODES]
                 for episode_number in speaker.get(k.APPEARED_IN_EPISODES, []):
@@ -49,13 +60,21 @@ class Season(BaseModel):
         speakers = [v for speaker, v in new_speakers_dict.iteritems()]
 
         for speaker in speakers:
-            speaker[k.EPISODE_WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(
+            speaker[k.WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(
                 self._replicasLength_total)
-            speaker[k.EPISODE_REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
-            speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(speaker[k.REPLICAS_LENGTH_LIST])
-            speaker[k.REPLICAS_LENGTH_MEDIAN] = median(speaker[k.REPLICAS_LENGTH_LIST])
-            speaker[k.REPLICAS_LENGTH_MAX] = max(speaker[k.REPLICAS_LENGTH_LIST])
-            speaker[k.REPLICAS_LENGTH_MIN] = min(speaker[k.REPLICAS_LENGTH_LIST])
+            speaker[k.REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
+
+            if speaker[k.REPLICAS_LENGTH_LIST]:
+                lengths = []
+                for key, v in dict(speaker[k.REPLICAS_LENGTH_LIST]).iteritems():
+                    key = key[1:]
+                    for i in range(v):
+                        lengths.append(int(key))
+                speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(lengths)
+                speaker[k.REPLICAS_LENGTH_MEDIAN] = median(lengths)
+                speaker[k.REPLICAS_LENGTH_MAX] = max(lengths)
+                speaker[k.REPLICAS_LENGTH_MIN] = min(lengths)
+
             new_speakers.append(speaker)
         self._speakers = new_speakers
 
@@ -91,8 +110,137 @@ class Season(BaseModel):
         self._number_of_episodes += 1
         self._number_of_replicas += episode[k.NUMBER_OF_REPLICAS]
         self._replicasLength_total += episode[k.REPLICAS_LENGTH_TOTAL]
-        self._replicasLength_List.extend(episode[k.REPLICAS_LENGTH_LIST])
+
+        for key, v in episode[k.REPLICAS_LENGTH_LIST].iteritems():
+            if key not in self._replicasLength_List:
+                self._replicasLength_List[key] = v
+            else:
+                self._replicasLength_List[key] += v
 
     @property
     def season_number(self):
         return self._season_number
+
+    def calculate_force_related_graph_for_speakers(self, episodes):
+        self._speakers = sorted(self._speakers, key=lambda key: key[k.NUMBER_OF_REPLICAS], reverse=True)
+
+        force_directed_data = {
+            'nodes': [],
+            'links': []
+        }
+        count = 0
+
+        links = []
+
+        speaker_count = 0
+        speaker_index = {}
+
+        for episode in episodes:
+            speakers = deepcopy(episode[k.SPEAKERS])
+
+            for s_a in speakers:
+                s_a_scenes = s_a[k.APPEARED_IN_SCENES]
+
+                if s_a[k.NAME] not in k.TOP_20_NAMES:
+                    continue
+
+                if s_a[k.NAME] not in speaker_index:
+                    force_directed_data['nodes'].append({
+                        "name": s_a[k.NAME],
+                        "group": (1 if count < 5 else 2)
+                    })
+                    count += 1
+
+                    speaker_index[s_a[k.NAME]] = speaker_count
+                    speaker_count += 1
+
+                for s_b in speakers:
+                    if s_a[k.NAME] == s_b[k.NAME]:
+                        continue
+
+                    if s_b[k.NAME] not in k.TOP_20_NAMES:
+                        continue
+
+                    if (s_b[k.NAME], s_a[k.NAME]) in links:
+                        continue
+
+                    s_b_scenes = s_b[k.APPEARED_IN_SCENES]
+
+                    common_scenes = list(set(s_a_scenes).intersection(s_b_scenes))
+
+                    for season in common_scenes:
+                        links.append(
+                            (s_a[k.NAME], s_b[k.NAME])
+                        )
+
+        dict_a = {row: 0 for row in links}
+        for row in links:
+            if row in dict_a:
+                dict_a[row] += 1
+
+        result = set([row + (dict_a[row],) for row in links])
+
+        nodes = {}
+        calc_links = []
+        for link in result:
+
+            source = int(speaker_index[link[0]])
+            target = int(speaker_index[link[1]])
+            value = int(link[2])
+
+            if source is not None and target is not None and value is not None:
+
+                calc_links.append({
+                    'source': source,
+                    'target': target,
+                    'weight': value
+                })
+            else:
+                print "x"
+
+
+
+        force_directed_data['links'] = calc_links
+
+        self._force_directed_data = force_directed_data
+
+    def calculate_burst_chart_for_number_of_replicas(self, scenes):
+        burst_dict_season = {
+            "name": "Season_%s" % self._season_number,
+            "children": []
+        }
+
+        help_dict = {}
+
+        for scene in scenes:
+            _scene_episode = scene[k.EPISODE_NUMBER]
+            _scene_number = scene[k.SCENE_NUMBER]
+            _scene_number_of_replicas = scene[k.NUMBER_OF_REPLICAS]
+
+            if _scene_episode not in help_dict:
+                help_dict[_scene_episode] = {}
+
+            help_dict[_scene_episode][_scene_number] = _scene_number_of_replicas
+
+        season_children = []
+
+        for episode_number, episode in help_dict.iteritems():
+            burst_dict_episode = {
+                "name": "Episode_%s" % episode_number
+            }
+
+            episode_children = []
+            for scene_number, value in episode.iteritems():
+                burst_dict_scene = {
+                    "name": "Scene_%s" % scene_number,
+                    "size": value
+                }
+
+                episode_children.append(burst_dict_scene)
+
+            burst_dict_episode['children'] = episode_children
+            season_children.append(burst_dict_episode)
+
+        burst_dict_season['children'] = season_children
+
+        print burst_dict_season

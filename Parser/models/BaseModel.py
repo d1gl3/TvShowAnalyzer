@@ -12,6 +12,7 @@ class BaseModel:
         self._configuration_density = None
         self._configuration_matrix = None
         self._episode_number = None
+        self._force_directed_data = {}
         self._id = None
         self._name = None
         self._number_of_episodes = 0
@@ -20,7 +21,7 @@ class BaseModel:
         self._number_of_seasons = 0
         self._number_of_speakers = 0
         self._replicasLength_avg = 0
-        self._replicasLength_List = []
+        self._replicasLength_List = {}
         self._replicasLength_max = 0
         self._replicasLength_med = 0
         self._replicasLength_min = 0
@@ -36,10 +37,16 @@ class BaseModel:
         self._speakers.append(speaker)
 
     def calculate_replica_statistics(self):
-        self._replicasLength_avg = mean(self._replicasLength_List)
-        self._replicasLength_med = median(self._replicasLength_List)
-        self._replicasLength_max = max(self._replicasLength_List)
-        self._replicasLength_min = min(self._replicasLength_List)
+        if self._replicasLength_List:
+            lengths = []
+            for key, v in self._replicasLength_List.iteritems():
+                key = key[1:]
+                for i in range(v):
+                    lengths.append(int(key))
+            self._replicasLength_avg = mean(lengths)
+            self._replicasLength_med = median(lengths)
+            self._replicasLength_max = max(lengths)
+            self._replicasLength_min = min(lengths)
 
     def calculate_speaker_relations(self):
         updated_speakers = []
