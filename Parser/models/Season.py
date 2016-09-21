@@ -55,7 +55,7 @@ class Season(BaseModel):
                 for episode_number in speaker.get(k.APPEARED_IN_EPISODES, []):
                     if episode_number not in old_appeared_in_episode_list:
                         old_appeared_in_episode_list.append(episode_number)
-                new_speakers_dict[speaker[k.NAME]][k.APPEARED_IN_SCENES] = old_appeared_in_episode_list
+                new_speakers_dict[speaker[k.NAME]][k.APPEARED_IN_EPISODES] = old_appeared_in_episode_list
 
         speakers = [v for speaker, v in new_speakers_dict.iteritems()]
 
@@ -244,3 +244,17 @@ class Season(BaseModel):
         burst_dict_season['children'] = season_children
 
         print burst_dict_season
+
+
+    def calculate_hamming_strings_for_speakers(self):
+
+        new_speaker_list = []
+        for speaker in deepcopy(self._speakers):
+            hamm_dist_string = ""
+
+            for i in range(1, self._number_of_episodes + 1):
+                hamm_dist_string += "1" if i in speaker[k.APPEARED_IN_EPISODES] else "0"
+
+            speaker[k.HAMMING_STRING] = hamm_dist_string
+            new_speaker_list.append(speaker)
+        self._speakers = new_speaker_list

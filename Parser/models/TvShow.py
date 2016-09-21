@@ -50,6 +50,7 @@ class TvShow(BaseModel):
 
                 new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_LIST] = old_replica_length_list
                 new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_TOTAL] += speaker.get(k.REPLICAS_LENGTH_TOTAL, 0)
+
                 old_appeared_in_seasons_list = new_speakers_dict[speaker[k.NAME]][k.APPEARED_IN_SEASONS]
                 for season_number in speaker.get(k.APPEARED_IN_SEASONS, []):
                     if season_number not in old_appeared_in_seasons_list:
@@ -198,3 +199,17 @@ class TvShow(BaseModel):
         force_directed_data['links'] = calc_links
 
         self._force_directed_data = force_directed_data
+
+
+    def calculate_hamming_strings_for_speakers(self):
+
+        new_speaker_list = []
+        for speaker in deepcopy(self._speakers):
+            hamm_dist_string = ""
+
+            for i in range(1, self._number_of_seasons + 1):
+                hamm_dist_string += "1" if i in speaker[k.APPEARED_IN_SEASONS] else "0"
+
+            speaker[k.HAMMING_STRING] = hamm_dist_string
+            new_speaker_list.append(speaker)
+        self._speakers = new_speaker_list

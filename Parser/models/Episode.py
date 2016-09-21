@@ -60,6 +60,7 @@ class Episode(BaseModel):
                 new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_LIST] = old_replica_length_list
 
                 new_speakers_dict[speaker[k.NAME]][k.REPLICAS_LENGTH_TOTAL] += speaker.get(k.REPLICAS_LENGTH_TOTAL, 0)
+
                 old_appeared_in_scene_list = new_speakers_dict[speaker[k.NAME]][k.APPEARED_IN_SCENES]
                 for scene_number in speaker.get(k.APPEARED_IN_SCENES, []):
                     if scene_number not in old_appeared_in_scene_list:
@@ -177,3 +178,18 @@ class Episode(BaseModel):
         force_directed_data['links'] = calc_links
 
         self._force_directed_data = force_directed_data
+
+    def calculate_hamming_strings_for_speakers(self):
+
+        new_speaker_list = []
+        for speaker in deepcopy(self._speakers):
+            hamm_dist_string = ""
+
+            for i in range(1, self._number_of_scenes + 1):
+                hamm_dist_string += "1" if i in speaker[k.APPEARED_IN_SCENES] else "0"
+
+            speaker[k.HAMMING_STRING] = hamm_dist_string
+            new_speaker_list.append(speaker)
+        self._speakers = new_speaker_list
+
+

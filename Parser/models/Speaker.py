@@ -39,7 +39,7 @@ class Speaker(BaseModel):
         return {
             k.APPEARED_IN_SCENES: self._appeared_in_scenes,
             k.APPEARED_IN_EPISODES: self._appeared_in_episodes,
-            k.APPEARED_IN_SEASONS: self._appeared_in_episodes,
+            k.APPEARED_IN_SEASONS: self._appeared_in_seasons,
             "_id": self._id,
             k.NAME: self._name,
             k.NUMBER_OF_REPLICAS: self._number_of_replicas,

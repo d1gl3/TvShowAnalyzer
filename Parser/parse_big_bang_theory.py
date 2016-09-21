@@ -31,7 +31,7 @@ def parse_big_bang_theory_raw_html_to_repliks():
     seasons = []
     episodes = []
 
-    raw_html_files = glob.glob('data/*.html')  # ["data/raw_html_0.html"]
+    raw_html_files = glob.glob('data/*.html')  # ["data/raw_html_10.html"]
     for html in raw_html_files:
         with open(html, "r") as f:
             html = f.read()
@@ -39,11 +39,8 @@ def parse_big_bang_theory_raw_html_to_repliks():
             # Regex for extracting Season and Episode number
             re_season_episode = re.compile(r'[0-9]+x[0-9]+')
 
-            season_number, episode_number = re.search(re_season_episode, html).group(0).split('x')
-            if season_number.startswith('0'):
-                season_number = int(season_number[1:])
-            if episode_number.startswith('0'):
-                episode_number = int(episode_number[1:])
+            season_episode = re.search(re_season_episode, html).group(0)
+            season_number, episode_number = (int(i) for i in season_episode.split('x'))
 
             log("Parsing Season %s Episode %s" % (season_number, episode_number))
 
@@ -177,6 +174,7 @@ def calculate_episode_stats():
         updated_episode.calculate_configuration_density()
         updated_episode.calculate_speaker_relations()
         updated_episode.calculate_force_related_graph_for_speakers()
+        updated_episode.calculate_hamming_strings_for_speakers()
 
         # Update Episode data in MongoDB
         episode_coll.update({'_id': _id}, updated_episode.get_json())
@@ -209,11 +207,13 @@ def calculate_season_stats():
         updated_season.calculate_configuration_matrix()
         updated_season.calculate_configuration_density()
         updated_season.calculate_speaker_relations()
-        episodes = episode_coll.find({k.SEASON_NUMBER:old_season[k.SEASON_NUMBER]})
+        episodes = episode_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
         updated_season.calculate_force_related_graph_for_speakers(episodes)
 
         scenes = scene_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
         updated_season.calculate_burst_chart_for_number_of_replicas(scenes)
+
+        updated_season.calculate_hamming_strings_for_speakers()
 
         season_coll.update({'_id': _id}, updated_season.get_json())
 
@@ -238,6 +238,7 @@ def calculate_tv_show_stats():
     tv_show.calculate_speaker_relations()
     episodes = episode_coll.find({})
     tv_show.calculate_force_related_graph_for_speakers(episodes)
+    tv_show.calculate_hamming_strings_for_speakers()
 
     tv_show_coll.insert(tv_show.get_json())
 
@@ -260,7 +261,7 @@ def calculate_speaker_word_lists():
     speaker_names = [speaker[k.NAME] for speaker in speakers]
 
     for speaker in speakers:
-        #if speaker.get('word_cloud_data'):
+        # if speaker.get('word_cloud_data'):
         #    continue
         name = speaker[k.NAME]
         string = ""
@@ -270,7 +271,8 @@ def calculate_speaker_word_lists():
         for replik in repliks:
             string += replik['replik']
 
-        speaker_words, positive_words, negative_words, names, dist_word_count, noun_count, adverb_count, adjective_count, verb_count = count_words_from_string(string, speaker_names)
+        speaker_words, positive_words, negative_words, names, dist_word_count, noun_count, adverb_count, adjective_count, verb_count = count_words_from_string(
+            string, speaker_names)
 
         speaker_words['list'].sort(key=lambda row: row[1], reverse=True)
         positive_words['list'].sort(key=lambda row: row[1], reverse=True)
@@ -332,20 +334,54 @@ def calculate_speaker_word_lists():
             speaker['positive_words_percentage'] = positive_words["count"] / float(speaker_words["count"])
 
         if speaker.get('negative_words_percentage') and speaker.get('positive_words_percentage'):
-            speaker['words_pos_ratio'] = float(speaker['positive_words_percentage']) / (float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
-            speaker['words_neg_ratio'] = float(speaker['negative_words_percentage']) / (float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
+            speaker['words_pos_ratio'] = float(speaker['positive_words_percentage']) / (
+            float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
+            speaker['words_neg_ratio'] = float(speaker['negative_words_percentage']) / (
+            float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
 
         speaker["_id"] = speaker["name"]
 
         speaker_coll.update({'_id': speaker["name"]}, speaker)
 
 
+def extract_speaker_hamming_distances():
+    speakers_cursor = speaker_coll.find({})
+    speakers = [speaker for speaker in speakers_cursor]
+
+    for speaker in speakers:
+        speaker_dists = {
+            'show_hamming_dist': speaker[k.HAMMING_STRING]
+        }
+
+        for season_number in xrange(1, 9):
+            season = season_coll.find_one({'season_number': season_number})
+            season_speaker = next((item for item in season[k.SPEAKERS] if item[k.NAME] == speaker[k.NAME]), {})
+
+            speaker_dists['season_%s' % season_number] = {
+                'season_hamming_dist': season_speaker.get(k.HAMMING_STRING, "0"*int(season[k.NUMBER_OF_EPISODES]))
+            }
+
+            for episode_number in xrange(1, season[k.NUMBER_OF_EPISODES]):
+                episode = episode_coll.find_one({'season_number': season_number,
+                                                 'episode_number': episode_number})
+                episode_speaker = next((item for item in episode[k.SPEAKERS] if item[k.NAME] == speaker[k.NAME]), {})
+
+                speaker_dists['season_%s' % season_number]['episode_%s' % episode_number] = {
+                    'episode_hamming_dist': episode_speaker.get(k.HAMMING_STRING, "0"*int(episode[k.NUMBER_OF_SCENES]))
+                }
+
+        speaker[k.HAMMING_DISTANCES] = speaker_dists
+
+        speaker_coll.update({'_id': speaker["name"]}, speaker)
+
+
 if __name__ == "__main__":
-    parse_big_bang_theory_raw_html_to_repliks()
-    calculate_scene_stats()
-    calculate_episode_stats()
-    calculate_season_stats()
-    calculate_tv_show_stats()
-    store_speakers_as_separate_objects()
-    calculate_speaker_word_lists()
+    #parse_big_bang_theory_raw_html_to_repliks()
+    #calculate_scene_stats()
+    #calculate_episode_stats()
+    #calculate_season_stats()
+    #calculate_tv_show_stats()
+    #store_speakers_as_separate_objects()
+    #calculate_speaker_word_lists()
+    extract_speaker_hamming_distances()
     #  takes longer, execute separately
