@@ -94,7 +94,7 @@ class Episode(BaseModel):
         conf_matrix = [header]
 
         for i in range(1, self._number_of_scenes + 1):
-            _row = [i]
+            _row = ["Scene " + str(i)]
             for speaker in self._speakers:
                 _appeared_in = speaker[k.APPEARED_IN_SCENES]
                 if i in _appeared_in:
@@ -191,5 +191,3 @@ class Episode(BaseModel):
             speaker[k.HAMMING_STRING] = hamm_dist_string
             new_speaker_list.append(speaker)
         self._speakers = new_speaker_list
-
-

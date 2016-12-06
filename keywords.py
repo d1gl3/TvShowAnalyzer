@@ -2,7 +2,8 @@ ALTERNATIVE = 'alternative'
 APPEARED_IN_EPISODES = 'appeared_in_episodes'
 APPEARED_IN_SCENES = 'appeared_in_scenes'
 APPEARED_IN_SEASONS = 'appeared_in_seasons'
-BIG_BANG_THEORY = 'big_bang_theory'
+BIG_BANG_THEORY = 'bbt'
+LOST = 'lost'
 CONCOMIDANT = 'concomidant'
 CONFIGURATION_DENSITY = 'configuration_density'
 CONFIGURATION_MATRIX = 'configuration_matrix'
@@ -46,12 +47,16 @@ SPEAKER_COLLECTION = 'speaker_collection'
 SPEAKER = 'speaker'
 SPEAKERS = 'speakers'
 SUBORDINATING = 'subordinating'
+TRANSKRIPT_COLLECTION = 'transkript_collection'
 TV_SHOW_COLLECTION = 'tv_show_collection'
 TV_SHOW_REPLIK_PERCENTAGE = 'tv_show_replik_percentage'
 TV_SHOW_WORD_PERCENTAGE = 'tv_show_word_percentage'
 WORD_COUNT = 'word_count'
 WORD_PERCENTAGE = 'word_percentage'
 
-TOP_20_NAMES = ["Sheldon", "Leonard", "Penny", "Howard", "Raj", "Amy", "Bernadette", "Stuart", "Priya", "Mrs Cooper", "Mrs Wolowitz", "Emily", "Beverley", "Wil", "Arthur", "Leslie", "Kripke", "Zack", "Steph", "Lucy"]
+TOP_10_NAMES_LOST = ["jack", "sawyer", "locke", "kate", "hurley", "sayid", "charlie", "ben", "desmond", "michael"]
+
+TOP_20_NAMES = ["Sheldon", "Leonard", "Penny", "Howard", "Raj", "Amy", "Bernadette", "Stuart", "Priya", "Mrs Cooper",
+                "Mrs Wolowitz", "Emily", "Beverley", "Wil", "Arthur", "Leslie", "Kripke", "Zack", "Steph", "Lucy"]
 TOP_10_NAMES = ["Sheldon", "Leonard", "Penny", "Howard", "Raj", "Amy", "Bernadette", "Stuart", "Priya", "Mrs Cooper"]
 TOP_5_NAMES = ["Sheldon", "Leonard", "Penny", "Howard", "Raj"]

@@ -1,75 +1,31 @@
-from ForeverDreamingParser import ForeverDreamingParser as Parser
-from MongoDB.MongoDBConnection import MongoDBConnection
-import glob
-import re
-import nltk
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import importlib
+import sys
+
 import keywords as k
+from MongoDB.MongoDBConnection import MongoDBConnection
 from Parser.models.Episode import Episode
 from Parser.models.Scene import Scene
 from Parser.models.Season import Season
 from Parser.models.Speaker import Speaker
 from Parser.models.TvShow import TvShow
-from Parser.utils import count_words_from_string, re_replace
+from Parser.utils import count_words_from_string
+
+db = sys.argv[1]
 
 mongo_db = MongoDBConnection()
-season_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SEASON_COLLECTION)
-scene_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
-episode_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.EPISODE_COLLECTION)
-replik_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
-speaker_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SPEAKER_COLLECTION)
-tv_show_coll = mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.TV_SHOW_COLLECTION)
+season_coll = mongo_db.get_coll_by_db_and_name(db, k.SEASON_COLLECTION)
+scene_coll = mongo_db.get_coll_by_db_and_name(db, k.SCENE_COLLECTION)
+episode_coll = mongo_db.get_coll_by_db_and_name(db, k.EPISODE_COLLECTION)
+replik_coll = mongo_db.get_coll_by_db_and_name(db, k.REPLIK_COLLECTION)
+speaker_coll = mongo_db.get_coll_by_db_and_name(db, k.SPEAKER_COLLECTION)
+tv_show_coll = mongo_db.get_coll_by_db_and_name(db, k.TV_SHOW_COLLECTION)
 
 
 def log(string):
     print "### " + string
-
-
-def parse_big_bang_theory_raw_html_to_repliks():
-    # Read paths of html files in download folder
-    log("Open HTML Files")
-
-    seasons = []
-    episodes = []
-
-    raw_html_files = glob.glob('data/*.html')  # ["data/raw_html_10.html"]
-    for html in raw_html_files:
-        with open(html, "r") as f:
-            html = f.read()
-
-            # Regex for extracting Season and Episode number
-            re_season_episode = re.compile(r'[0-9]+x[0-9]+')
-
-            season_episode = re.search(re_season_episode, html).group(0)
-            season_number, episode_number = (int(i) for i in season_episode.split('x'))
-
-            log("Parsing Season %s Episode %s" % (season_number, episode_number))
-
-            # Create Season object in database
-            if "season_%s" % season_number not in seasons:
-                log("Season %s not in database. Created!" % season_number)
-                seasons.append("season_%s" % season_number)
-                season = Season()
-                season._season_number = season_number
-                season_coll.insert_one(season.get_json())
-
-            # Create Episode object in database
-            if "%sx%s" % (season_number, episode_number) not in episodes:
-                log("Season %s Episode %s not in database. Created!" % (season_number, episode_number))
-                episodes.append("%sx%s" % (season_number, episode_number))
-                episode = Episode()
-                episode._season_number = season_number
-                episode._episode_number = episode_number
-                episode_coll.insert_one(episode.get_json())
-
-            # Parse Episode HTML, saves Repliks and Scenes to MongoDB
-            try:
-                parser = Parser(season_number, episode_number)
-                parser.parse_html(html)
-            except Exception, e:
-                log("Could not parse Season %s Episode %s" % (season_number, episode_number))
-                log("Reason: %s" % e.message)
-
-            log("Succesfully parsed Season %s Episode %s" % (season_number, episode_number))
 
 
 # Calculation of the scene stats
@@ -261,8 +217,6 @@ def calculate_speaker_word_lists():
     speaker_names = [speaker[k.NAME] for speaker in speakers]
 
     for speaker in speakers:
-        # if speaker.get('word_cloud_data'):
-        #    continue
         name = speaker[k.NAME]
         string = ""
 
@@ -335,9 +289,9 @@ def calculate_speaker_word_lists():
 
         if speaker.get('negative_words_percentage') and speaker.get('positive_words_percentage'):
             speaker['words_pos_ratio'] = float(speaker['positive_words_percentage']) / (
-            float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
+                float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
             speaker['words_neg_ratio'] = float(speaker['negative_words_percentage']) / (
-            float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
+                float(speaker['negative_words_percentage']) + speaker['positive_words_percentage'])
 
         speaker["_id"] = speaker["name"]
 
@@ -358,7 +312,7 @@ def extract_speaker_hamming_distances():
             season_speaker = next((item for item in season[k.SPEAKERS] if item[k.NAME] == speaker[k.NAME]), {})
 
             speaker_dists['season_%s' % season_number] = {
-                'season_hamming_dist': season_speaker.get(k.HAMMING_STRING, "0"*int(season[k.NUMBER_OF_EPISODES]))
+                'season_hamming_dist': season_speaker.get(k.HAMMING_STRING, "0" * int(season[k.NUMBER_OF_EPISODES]))
             }
 
             for episode_number in xrange(1, season[k.NUMBER_OF_EPISODES]):
@@ -367,7 +321,8 @@ def extract_speaker_hamming_distances():
                 episode_speaker = next((item for item in episode[k.SPEAKERS] if item[k.NAME] == speaker[k.NAME]), {})
 
                 speaker_dists['season_%s' % season_number]['episode_%s' % episode_number] = {
-                    'episode_hamming_dist': episode_speaker.get(k.HAMMING_STRING, "0"*int(episode[k.NUMBER_OF_SCENES]))
+                    'episode_hamming_dist': episode_speaker.get(k.HAMMING_STRING,
+                                                                "0" * int(episode[k.NUMBER_OF_SCENES]))
                 }
 
         speaker[k.HAMMING_DISTANCES] = speaker_dists
@@ -376,12 +331,12 @@ def extract_speaker_hamming_distances():
 
 
 if __name__ == "__main__":
-    parse_big_bang_theory_raw_html_to_repliks()
-    calculate_scene_stats()
-    calculate_episode_stats()
-    calculate_season_stats()
+    print "successfully invoked script"
+    #calculate_scene_stats()
+    #calculate_episode_stats()
+    #calculate_season_stats()
     calculate_tv_show_stats()
-    store_speakers_as_separate_objects()
-    calculate_speaker_word_lists()
-    extract_speaker_hamming_distances()
+    #store_speakers_as_separate_objects()
     #  takes longer, execute separately
+    #calculate_speaker_word_lists()
+    #extract_speaker_hamming_distances()

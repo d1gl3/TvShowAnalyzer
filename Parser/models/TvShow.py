@@ -95,7 +95,7 @@ class TvShow(BaseModel):
         conf_matrix = [header]
 
         for i in range(1, self._number_of_seasons + 1):
-            _row = [i]
+            _row = ["Season " + str(i)]
             for speaker in self._speakers:
                 _appeared_in = speaker[k.APPEARED_IN_SEASONS]
                 if i in _appeared_in:

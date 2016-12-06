@@ -50,20 +50,21 @@ class Scene(BaseModel):
     def calculate_speaker_statistics(self):
         speakers = deepcopy(self._speakers)
         new_speakers = []
-        for speaker in speakers:
-            speaker[k.WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(self._replicasLength_total)
-            speaker[k.REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
-            if speaker[k.REPLICAS_LENGTH_LIST]:
-                lengths = []
-                for key, v in dict(speaker[k.REPLICAS_LENGTH_LIST]).iteritems():
-                    key = key[1:]
-                    for i in range(v):
-                        lengths.append(int(key))
-                speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(lengths)
-                speaker[k.REPLICAS_LENGTH_MEDIAN] = median(lengths)
-                speaker[k.REPLICAS_LENGTH_MAX] = max(lengths)
-                speaker[k.REPLICAS_LENGTH_MIN] = min(lengths)
-            new_speakers.append(speaker)
+        if self._replicasLength_total > 0 and self._number_of_replicas > 0:
+            for speaker in speakers:
+                speaker[k.WORD_PERCENTAGE] = float(speaker[k.REPLICAS_LENGTH_TOTAL]) / float(self._replicasLength_total)
+                speaker[k.REPLIK_PERCENTAGE] = float(speaker[k.NUMBER_OF_REPLICAS]) / float(self._number_of_replicas)
+                if speaker[k.REPLICAS_LENGTH_LIST]:
+                    lengths = []
+                    for key, v in dict(speaker[k.REPLICAS_LENGTH_LIST]).iteritems():
+                        key = key[1:]
+                        for i in range(v):
+                            lengths.append(int(key))
+                    speaker[k.REPLICAS_LENGTH_AVERAGE] = mean(lengths)
+                    speaker[k.REPLICAS_LENGTH_MEDIAN] = median(lengths)
+                    speaker[k.REPLICAS_LENGTH_MAX] = max(lengths)
+                    speaker[k.REPLICAS_LENGTH_MIN] = min(lengths)
+                new_speakers.append(speaker)
 
-        self._speakers = new_speakers
+            self._speakers = new_speakers
 

@@ -8,7 +8,6 @@ import keywords as k
 
 
 class Season(BaseModel):
-
     def __init__(self):
         BaseModel.__init__(self)
 
@@ -84,7 +83,7 @@ class Season(BaseModel):
         conf_matrix = [header]
 
         for i in range(1, self._number_of_episodes + 1):
-            _row = [i]
+            _row = ["Episode " + str(i)]
             for speaker in self._speakers:
                 _appeared_in = speaker[k.APPEARED_IN_EPISODES]
                 if i in _appeared_in:
@@ -198,8 +197,6 @@ class Season(BaseModel):
             else:
                 print "x"
 
-
-
         force_directed_data['links'] = calc_links
 
         self._force_directed_data = force_directed_data
@@ -244,7 +241,6 @@ class Season(BaseModel):
         burst_dict_season['children'] = season_children
 
         print burst_dict_season
-
 
     def calculate_hamming_strings_for_speakers(self):
 

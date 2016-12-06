@@ -1,7 +1,7 @@
 import requests
 
 # Download URLs, manually scraped from chrome console with javascript
-urls = [
+"""urls = [
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=8536&view=print",
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=8537&view=print",
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=8538&view=print",
@@ -208,7 +208,72 @@ urls = [
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=26759&view=print",
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=26928&view=print",
     "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=27023&view=print",
-]
+    "http://transcripts.foreverdreaming.org/viewtopic.php?f=159&t=27152&view=print"
+]"""
+
+urls = ["http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7743",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7871",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7908",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7909",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7744",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7894",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7901",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7906",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7907",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7905",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7872",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7914",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7915",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7916",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7917",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7918",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7919",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7920",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7921",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7922",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7885",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7913",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7912",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7911",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7910",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7883",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7878",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7875",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7865",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=7882",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=10931",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=10964",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=10989",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11010",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11025",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11043",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11054",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11101",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11127",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11139",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11127",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=11139",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=16452",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=17753",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=17759",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=17760",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=17773",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=18351",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=18438",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=18501",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=18562",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=18722",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=19079",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=26857",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=26957",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27075",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27213",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27324",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27415",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27464",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27550",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27649",
+        "http://transcripts.foreverdreaming.org/viewtopic.php?f=67&t=27733"]
 
 headers = {
     'Host': 'transcripts.foreverdreaming.org',
@@ -231,7 +296,7 @@ def download_scripts():
         html_req = requests.get(url, headers=headers)
         html = html_req.content
 
-        with open("data/raw_html_%s.html" % count, "w") as f:
+        with open("data/got/raw_html_%s.html" % count, "w") as f:
             f.write(html)
 
         count += 1
