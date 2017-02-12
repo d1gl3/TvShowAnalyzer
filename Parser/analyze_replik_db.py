@@ -371,12 +371,12 @@ def add_episode_titles():
 
 if __name__ == "__main__":
     print "successfully invoked script"
-    #calculate_scene_stats()
-    #calculate_episode_stats()
+    calculate_scene_stats()
+    calculate_episode_stats()
     calculate_season_stats()
-    #calculate_tv_show_stats()
-    #store_speakers_as_separate_objects()
+    calculate_tv_show_stats()
+    store_speakers_as_separate_objects()
     #  takes longer, execute separately
-    #calculate_speaker_word_lists()
-    #extract_speaker_hamming_distances()
-    #add_episode_titles()
+    calculate_speaker_word_lists()
+    extract_speaker_hamming_distances()
+    add_episode_titles()
