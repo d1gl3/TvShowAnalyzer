@@ -143,8 +143,8 @@ class BigBangTheoryParser:
         }
 
         parser.transkript_coll.insert(transkript)
-        #requests.post("http://localhost:8080/api/post_replik", json=parser.replik_list,
-         #             headers={"content-type": "application/json"})
+        requests.post("http://localhost:8080/api/post_replik", json=parser.replik_list,
+                      headers={"content-type": "application/json"})
 
 
 def log(string):
