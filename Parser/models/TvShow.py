@@ -1,5 +1,7 @@
 import itertools
 
+import operator
+
 from BaseModel import BaseModel
 from copy import deepcopy
 from Parser.utils import *
@@ -91,14 +93,16 @@ class TvShow(BaseModel):
 
     def calculate_configuration_matrix(self):
 
-        header = ["Speaker/Season"] + [speaker[k.NAME] for speaker in self._speakers]
-        conf_matrix = [header]
+        header = ["Speaker/Season"] + ["Season " + str(i) for i in xrange(1, self._number_of_seasons + 1)]
+        conf_matrix = []
 
-        for i in range(1, self._number_of_seasons + 1):
-            _row = ["Season " + str(i)]
-            for speaker in self._speakers:
-                _appeared_in = speaker[k.APPEARED_IN_SEASONS]
-                if i in _appeared_in:
+        speakers = deepcopy(self._speakers)
+        speakers.sort(key=lambda x: len(x[k.APPEARED_IN_SEASONS]), reverse=True)
+
+        for speaker in speakers:
+            _row = [speaker[k.NAME]]
+            for i in xrange(1, self._number_of_seasons + +1):
+                if i in speaker[k.APPEARED_IN_SEASONS]:
                     _row.append(1)
                 else:
                     _row.append(0)
@@ -120,6 +124,8 @@ class TvShow(BaseModel):
     def calculate_force_related_graph_for_speakers(self, episodes):
         self._speakers = sorted(self._speakers, key=lambda key: key[k.NUMBER_OF_REPLICAS], reverse=True)
 
+        episodes = list(episodes)
+
         force_directed_data = {
             'nodes': [],
             'links': []
@@ -127,79 +133,88 @@ class TvShow(BaseModel):
         count = 0
 
         links = []
+        relations = {}
 
         speaker_count = 0
         speaker_index = {}
 
         for episode in episodes:
-            speakers = deepcopy(episode[k.SPEAKERS])
 
-            for s_a in speakers:
-                s_a_scenes = s_a[k.APPEARED_IN_SCENES]
+            epi_force_data = episode.get(k.FORCE_DIRECTED_DATA)
 
-                if s_a[k.NAME] not in k.TOP_20_NAMES:
+            for link in epi_force_data[k.LINKS]:
+                if link[k.SOURCE] not in k.TOP_20_NAMES or link[k.TARGET] not in k.TOP_20_NAMES:
                     continue
 
-                if s_a[k.NAME] not in speaker_index:
-                    force_directed_data['nodes'].append({
-                        "name": s_a[k.NAME],
-                        "group": (1 if count < 5 else 2)
-                    })
-                    count += 1
+                relation_tuple = (link[k.SOURCE], link[k.TARGET])
 
-                    speaker_index[s_a[k.NAME]] = speaker_count
-                    speaker_count += 1
+                if relation_tuple not in relations:
+                    relations[relation_tuple] = {
+                        link[k.TYPE]: 1
+                    }
+                else:
+                    if link[k.TYPE] in relations[relation_tuple]:
+                        relations[relation_tuple][link[k.TYPE]] += 1
+                    else:
+                        relations[relation_tuple][link[k.TYPE]] = 1
 
-                for s_b in speakers:
-                    if s_a[k.NAME] == s_b[k.NAME]:
-                        continue
-
-                    if s_b[k.NAME] not in k.TOP_20_NAMES:
-                        continue
-
-                    if (s_b[k.NAME], s_a[k.NAME]) in links:
-                        continue
-
-                    s_b_scenes = s_b[k.APPEARED_IN_SCENES]
-
-                    common_scenes = list(set(s_a_scenes).intersection(s_b_scenes))
-
-                    for season in common_scenes:
-                        links.append(
-                            (s_a[k.NAME], s_b[k.NAME])
-                        )
-
-        dict_a = {row: 0 for row in links}
-        for row in links:
-            if row in dict_a:
-                dict_a[row] += 1
-
-        result = set([row + (dict_a[row],) for row in links])
-
-        nodes = {}
         calc_links = []
-        for link in result:
 
-            source = int(speaker_index[link[0]])
-            target = int(speaker_index[link[1]])
-            value = int(link[2])
+        new_relations_dict = {}
 
-            if source is not None and target is not None and value is not None:
+        for speakers, relation in relations.iteritems():
+            speakers_rev = (speakers[1], speakers[0])
 
-                calc_links.append({
-                    'source': source,
-                    'target': target,
-                    'weight': value
-                })
-            else:
-                print "x"
+            if speakers not in new_relations_dict and speakers_rev not in new_relations_dict:
+                new_relations_dict[speakers] = relation
 
+            if speakers not in new_relations_dict and speakers_rev in new_relations_dict:
 
+                old_relation = new_relations_dict.get(speakers_rev)
+
+                old_relation[k.INDEPENDENT] = old_relation.get(k.INDEPENDENT, 0) + relation.get(k.INDEPENDENT, 0)
+                old_relation[k.CONCOMIDANT] = old_relation.get(k.CONCOMIDANT, 0) + relation.get(k.CONCOMIDANT, 0)
+                old_relation[k.ALTERNATIVE] = old_relation.get(k.ALTERNATIVE, 0) + relation.get(k.ALTERNATIVE, 0)
+
+                old_rel_dom = old_relation.get(k.DOMINATING, 0)
+                old_rel_sub = old_relation.get(k.SUBORDINATING, 0)
+                new_rel_dom = relation.get(k.DOMINATING, 0)
+                new_rel_sub = relation.get(k.SUBORDINATING, 0)
+
+                if old_rel_dom:
+                    old_relation[k.DOMINATING] += new_rel_sub
+                if old_rel_sub:
+                    old_relation[k.SUBORDINATING] += new_rel_dom
+
+                new_relations_dict[speakers_rev] = old_relation
+                print "xxx"
+
+        for speakers, relation in new_relations_dict.iteritems():
+            relation_name = max(relation.iteritems(), key=operator.itemgetter(1))[0]
+
+            for speaker in speakers:
+                if speaker not in force_directed_data[k.NODES]:
+                    force_directed_data['nodes'].append({
+                        "name": speaker,
+                        "group": 1
+                    })
+
+            weight = relation[relation_name]
+
+            if relation_name == k.SUBORDINATING:
+                relation_name = k.DOMINATING
+                speakers = (speakers[1], speakers[0])
+
+            calc_links.append({
+                k.SOURCE: speakers[0],
+                k.TARGET: speakers[1],
+                k.WEIGHT: weight,
+                k.TYPE: relation_name
+            })
 
         force_directed_data['links'] = calc_links
 
         self._force_directed_data = force_directed_data
-
 
     def calculate_hamming_strings_for_speakers(self):
 

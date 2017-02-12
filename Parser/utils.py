@@ -37,6 +37,12 @@ def count_words_from_string(string, speakernames=None):
 
     pos_tagging = nltk.pos_tag(word_list)
     counts = Counter(tag for word, tag in pos_tagging)
+
+    distinct_nouns = list(set([item[0] for item in pos_tagging if item[1].startswith('NN')]))
+    distinct_adj = list(set([item[0] for item in pos_tagging if item[1].startswith('JJ')]))
+    distinct_adv = list(set([item[0] for item in pos_tagging if item[1].startswith('RB')]))
+    distinct_ver = list(set([item[0] for item in pos_tagging if item[1].startswith('VB')]))
+
     noun_count = int(counts.get('NN', 0)) + int(counts.get('NNS', 0)) + int(counts.get('NNP', 0)) + int(counts.get('NNPS', 0))
     adjective_count = int(counts.get('JJ', 0)) + int(counts.get('JJR', 0)) + int(counts.get('JJS', 0))
     verb_count = int(counts.get('VB', 0)) + int(counts.get('VBD', 0)) + int(counts.get('VBG', 0)) + \
@@ -66,4 +72,4 @@ def count_words_from_string(string, speakernames=None):
     for name in distinct_names:
         names_called.append([name, name_word_list.count(name)])
 
-    return {"count": len(word_list), "list": result_list}, {"count": len(positive_word_list),"list": positive_results}, {"count": len(negative_word_list), "list": negative_results}, {"count": len(names_called),"list": names_called}, len(distinct_words), noun_count, adverb_count, adjective_count, verb_count
+    return {"count": len(word_list), "list": result_list}, {"count": len(positive_word_list),"list": positive_results}, {"count": len(negative_word_list), "list": negative_results}, {"count": len(names_called),"list": names_called}, len(distinct_words), len(distinct_nouns), len(distinct_adv), len(distinct_adj), len(distinct_ver)

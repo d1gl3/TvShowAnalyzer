@@ -22,6 +22,7 @@ episode_coll = mongo_db.get_coll_by_db_and_name(db, k.EPISODE_COLLECTION)
 replik_coll = mongo_db.get_coll_by_db_and_name(db, k.REPLIK_COLLECTION)
 speaker_coll = mongo_db.get_coll_by_db_and_name(db, k.SPEAKER_COLLECTION)
 tv_show_coll = mongo_db.get_coll_by_db_and_name(db, k.TV_SHOW_COLLECTION)
+transkript_coll = mongo_db.get_coll_by_db_and_name(db, k.TRANSKRIPT_COLLECTION)
 
 
 def log(string):
@@ -117,6 +118,9 @@ def calculate_episode_stats():
         scenes = list(scenes)
 
         for scene in scenes:
+            if not scene.get(k.NUMBER_OF_REPLICAS):
+                continue
+
             updated_episode.add_scene(scene)
 
             scene_speakers = scene[k.SPEAKERS]
@@ -131,6 +135,8 @@ def calculate_episode_stats():
         updated_episode.calculate_speaker_relations()
         updated_episode.calculate_force_related_graph_for_speakers()
         updated_episode.calculate_hamming_strings_for_speakers()
+
+        updated_episode.calculate_speaker_probabilities([updated_episode.get_json()])
 
         # Update Episode data in MongoDB
         episode_coll.update({'_id': _id}, updated_episode.get_json())
@@ -166,10 +172,10 @@ def calculate_season_stats():
         episodes = episode_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
         updated_season.calculate_force_related_graph_for_speakers(episodes)
 
-        scenes = scene_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
-        updated_season.calculate_burst_chart_for_number_of_replicas(scenes)
-
         updated_season.calculate_hamming_strings_for_speakers()
+
+        episodes = episode_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
+        updated_season.calculate_speaker_probabilities(list(episodes))
 
         season_coll.update({'_id': _id}, updated_season.get_json())
 
@@ -187,6 +193,18 @@ def calculate_tv_show_stats():
         for speaker in season_speakers:
             tv_show.add_speaker(speaker)
 
+    replics = replik_coll.find({})
+
+    replik_length_list = {}
+
+    for rep in replics:
+        if "_%s" % rep.get(k.WORD_COUNT) not in replik_length_list:
+            replik_length_list["_%s" % rep[k.WORD_COUNT]] = 1
+        else:
+            replik_length_list["_%s" % rep[k.WORD_COUNT]] += 1
+
+    tv_show._replicasLength_List = replik_length_list
+
     tv_show.calculate_replica_statistics()
     tv_show.calculate_speaker_statistics()
     tv_show.calculate_configuration_matrix()
@@ -196,7 +214,17 @@ def calculate_tv_show_stats():
     tv_show.calculate_force_related_graph_for_speakers(episodes)
     tv_show.calculate_hamming_strings_for_speakers()
 
-    tv_show_coll.insert(tv_show.get_json())
+    tv_show = tv_show.get_json()
+
+    speakers = tv_show[k.SPEAKERS]
+    del tv_show[k.SPEAKERS]
+
+    tv_show_coll.insert(tv_show)
+
+    for speaker in speakers:
+        speaker["_id"] = speaker["name"]
+
+        speaker_coll.insert(speaker)
 
 
 def store_speakers_as_separate_objects():
@@ -330,13 +358,25 @@ def extract_speaker_hamming_distances():
         speaker_coll.update({'_id': speaker["name"]}, speaker)
 
 
+def add_episode_titles():
+    episodes = episode_coll.find({})
+
+    for epi in episodes:
+        transkript = transkript_coll.find_one({"season_number": epi[k.SEASON_NUMBER], "episode_number": epi[k.EPISODE_NUMBER]})
+
+        epi[k.TITLE] = transkript[k.TITLE]
+
+        episode_coll.update({'_id': epi['_id']}, epi)
+
+
 if __name__ == "__main__":
     print "successfully invoked script"
-    calculate_scene_stats()
-    calculate_episode_stats()
+    #calculate_scene_stats()
+    #calculate_episode_stats()
     calculate_season_stats()
-    calculate_tv_show_stats()
-    store_speakers_as_separate_objects()
+    #calculate_tv_show_stats()
+    #store_speakers_as_separate_objects()
     #  takes longer, execute separately
-    calculate_speaker_word_lists()
-    extract_speaker_hamming_distances()
+    #calculate_speaker_word_lists()
+    #extract_speaker_hamming_distances()
+    #add_episode_titles()

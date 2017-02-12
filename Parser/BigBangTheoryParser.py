@@ -7,29 +7,30 @@ import re
 import requests
 
 from Parser.models.Scene import Scene
-from name_mapping import name_mapping
+from name_mapping import name_mapping, filtered_names
 
 
 class BigBangHTMLParser(HTMLParser):
-    def __init__(self, season, episode):
+    def __init__(self, season, episode, title):
         HTMLParser.__init__(self)
 
         self.mongo_db = MongoDBConnection()
 
         self.con = self.mongo_db.get_con()
-        self.db = self.mongo_db.get_db_by_name(k.BIG_BANG_THEORY)
+        self.db = self.mongo_db.get_db_by_name("bbt_new")
         self.episode = episode
         self.out = {"0": []}
-        self.replik_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.REPLIK_COLLECTION)
-        self.scene_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SCENE_COLLECTION)
-        self.speaker_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.SPEAKER_COLLECTION)
-        self.transkript_coll = self.mongo_db.get_coll_by_db_and_name(k.BIG_BANG_THEORY, k.TRANSKRIPT_COLLECTION)
+        self.replik_coll = self.mongo_db.get_coll_by_db_and_name("bbt_new", k.REPLIK_COLLECTION)
+        self.scene_coll = self.mongo_db.get_coll_by_db_and_name("bbt_new", k.SCENE_COLLECTION)
+        self.speaker_coll = self.mongo_db.get_coll_by_db_and_name("bbt_new", k.SPEAKER_COLLECTION)
+        self.transkript_coll = self.mongo_db.get_coll_by_db_and_name("bbt_new", k.TRANSKRIPT_COLLECTION)
         self.scene_count = 0
         self.replik_count = 0
         self.season = season
         self.replik_list = []
         self.transkript = ""
         self.speakers = []
+        self.title = title
 
     def handle_data(self, data):
 
@@ -68,6 +69,9 @@ class BigBangHTMLParser(HTMLParser):
             if speakers == "Scene":
                 return
 
+            if speakers in filtered_names:
+                pass
+
             mapped_name = name_mapping.get(speakers)
 
             if mapped_name:
@@ -103,16 +107,18 @@ class BigBangHTMLParser(HTMLParser):
                 new_replik._season_number = self.season
                 new_replik._replik_number = self.replik_count
 
-                self.replik_list.append(new_replik.get_json())
+                if speaker not in filtered_names:
+                    self.replik_list.append(new_replik.get_json())
 
             self.replik_count += 1
             self.transkript += (data + '\n')
 
 
 class BigBangTheoryParser:
-    def __init__(self, season, episode):
+    def __init__(self, season, episode, title):
         self.season = season
         self.episode = episode
+        self.title = title
 
     def parse_html(self, html):
         # Remove Strong Elements from html, to better recognize spoken passages by Regex
@@ -122,7 +128,7 @@ class BigBangTheoryParser:
         # Only process script body
         html = html.split('<hr class="sep" />')[-2]
 
-        parser = BigBangHTMLParser(self.season, self.episode)
+        parser = BigBangHTMLParser(self.season, self.episode, self.title)
         parser.feed(html)
 
         transkript = {
@@ -132,12 +138,13 @@ class BigBangTheoryParser:
             k.NUMBER_OF_REPLICAS: parser.replik_count,
             k.NUMBER_OF_SCENES: parser.scene_count,
             k.SPEAKERS: parser.speakers,
+            k.TITLE: parser.title,
             '_id': 'transkript_%s_%s' % (parser.season, parser.episode)
         }
 
         parser.transkript_coll.insert(transkript)
-        requests.post("http://localhost:8080/api/post_replik", json=parser.replik_list,
-                      headers={"content-type": "application/json"})
+        #requests.post("http://localhost:8080/api/post_replik", json=parser.replik_list,
+         #             headers={"content-type": "application/json"})
 
 
 def log(string):

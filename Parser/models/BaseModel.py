@@ -20,6 +20,7 @@ class BaseModel:
         self._number_of_scenes = 0
         self._number_of_seasons = 0
         self._number_of_speakers = 0
+        self._probability_matrix = []
         self._replicasLength_avg = 0
         self._replicasLength_List = {}
         self._replicasLength_max = 0
@@ -29,6 +30,7 @@ class BaseModel:
         self._scene_number = None
         self._scene_replic_percentage = 0
         self._scene_word_percentage = 0
+        self._speaker_probabilities = {}
         self._season_number = None
         self._speakers = []
         self._title = None

@@ -57,6 +57,7 @@ module.exports = function (db_connection_string) {
                     season_number: data.season_number,
                     episode_number: data.episode_number
                 };
+                
                 coll.getEpisodeCollection().insert(episode, function (err) {
                     if (err) {
                         console.log("Episode " + data.season_number + " already exists");

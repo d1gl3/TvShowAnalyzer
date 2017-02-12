@@ -26,14 +26,16 @@ class Episode(BaseModel):
             k.REPLICAS_LENGTH_TOTAL: self._replicasLength_total,
             k.REPLICAS_LENGTH_LIST: self._replicasLength_List,
             k.SEASON_NUMBER: self._season_number,
-            k.SPEAKERS: self._speakers
+            k.SPEAKERS: self._speakers,
+            k.PROBABILITY_MATRIX: self._probability_matrix,
+            k.SPEAKER_PROBABILITIES: self._speaker_probabilities
         }
 
     def add_scene(self, scene):
         self._number_of_scenes += 1
-        self._number_of_replicas += scene[k.NUMBER_OF_REPLICAS]
-        self._replicasLength_total += scene[k.REPLICAS_LENGTH_TOTAL]
-        for key, v in scene[k.REPLICAS_LENGTH_LIST].iteritems():
+        self._number_of_replicas += scene.get(k.NUMBER_OF_REPLICAS, 0)
+        self._replicasLength_total += scene.get(k.REPLICAS_LENGTH_TOTAL, 0)
+        for key, v in scene.get(k.REPLICAS_LENGTH_LIST, {}).iteritems():
             if key not in self._replicasLength_List:
                 self._replicasLength_List[key] = v
             else:
@@ -90,14 +92,16 @@ class Episode(BaseModel):
 
     def calculate_configuration_matrix(self):
 
-        header = ["Speaker/Scene"] + [speaker[k.NAME] for speaker in self._speakers]
-        conf_matrix = [header]
+        header = ["Speaker/Scene"] + ["Scene " + str(i) for i in xrange(1, self._number_of_scenes + 1)]
+        conf_matrix = []
 
-        for i in range(1, self._number_of_scenes + 1):
-            _row = ["Scene " + str(i)]
-            for speaker in self._speakers:
-                _appeared_in = speaker[k.APPEARED_IN_SCENES]
-                if i in _appeared_in:
+        speakers = deepcopy(self._speakers)
+        speakers.sort(key=lambda x: len(x[k.APPEARED_IN_SCENES]), reverse=True)
+
+        for speaker in speakers:
+            _row = [speaker[k.NAME]]
+            for i in xrange(1, self._number_of_scenes + +1):
+                if i in speaker[k.APPEARED_IN_SCENES]:
                     _row.append(1)
                 else:
                     _row.append(0)
@@ -138,7 +142,7 @@ class Episode(BaseModel):
             speaker_count += 1
             node = {
                 "name": s_a[k.NAME],
-                "group": (1 if count < 20 else 2)
+                "group": (1 if count < 5 else 2)
             }
             force_directed_data['nodes'].append(node)
             for s_b in self._speakers:
@@ -169,10 +173,25 @@ class Episode(BaseModel):
         nodes = {}
         calc_links = []
         for link in result:
+
+            for speaker in self._speakers:
+                if speaker[k.NAME] == link[0]:
+                    if link[1] in speaker[k.DOMINATING]:
+                        type = k.DOMINATING
+                    elif link[1] in speaker[k.SUBORDINATING]:
+                        type = k.SUBORDINATING
+                    elif link[1] in speaker[k.CONCOMIDANT]:
+                        type = k.CONCOMIDANT
+                    elif link[1] in speaker[k.ALTERNATIVE]:
+                        type = k.ALTERNATIVE
+                    elif link[1] in speaker[k.INDEPENDENT]:
+                        type = k.INDEPENDENT
+
             calc_links.append({
-                'source': int(speaker_index[link[0]]),
-                'target': int(speaker_index[link[1]]),
-                'weight': int(link[2])
+                'source': link[0],
+                'target': link[1],
+                'weight': int(link[2]),
+                'type': type
             })
 
         force_directed_data['links'] = calc_links
@@ -191,3 +210,88 @@ class Episode(BaseModel):
             speaker[k.HAMMING_STRING] = hamm_dist_string
             new_speaker_list.append(speaker)
         self._speakers = new_speaker_list
+
+
+    def calculate_speaker_probabilities(self, episodes):
+        new_speaker_list = []
+
+        speaker_scenes = {
+            "single": {},
+            "couple": {}
+        }
+        number_of_scenes_total = 0
+
+        for epi in episodes:
+            number_of_scenes_total += epi[k.NUMBER_OF_SCENES]
+
+            for speaker in epi[k.SPEAKERS]:
+                if speaker[k.NAME] not in speaker_scenes['single']:
+                    speaker_scenes['single'][speaker[k.NAME]] = len(speaker[k.APPEARED_IN_SCENES])
+                else:
+                    speaker_scenes['single'][speaker[k.NAME]] += len(speaker[k.APPEARED_IN_SCENES])
+
+            for speaker in epi[k.SPEAKERS]:
+                for speaker_b in epi[k.SPEAKERS]:
+                    if speaker[k.NAME] != speaker_b[k.NAME]:
+
+                        key = tuple(sorted([speaker[k.NAME], speaker_b[k.NAME]]))
+
+                        if key not in speaker_scenes['couple']:
+                            speaker_scenes['couple'][key] = len(
+                                list(set(speaker[k.APPEARED_IN_SCENES]) & set(speaker_b[k.APPEARED_IN_SCENES])))
+
+        for speaker in deepcopy(speaker_scenes['single']):
+            speaker_scenes['single'][speaker] /= float(number_of_scenes_total)
+
+        speakers = deepcopy(self._speakers)
+        sorted_speakers = sorted(speakers, key=lambda x: x[k.NAME])
+
+        probability_matrix = [["Speakers"] + [s[k.NAME] for s in sorted_speakers]]
+
+        for speaker_a in sorted_speakers:
+            a_name = speaker_a[k.NAME]
+            new_row = [a_name]
+            for speaker_b in sorted_speakers:
+                b_name = speaker_b[k.NAME]
+
+                if a_name != b_name:
+                    key = tuple(sorted([a_name, b_name]))
+
+                    n_ij = speaker_scenes['couple'].get(key)
+
+                    if not n_ij:
+                        new_row.append("x")
+                        continue
+
+                    _n_ij = number_of_scenes_total * speaker_scenes['single'][key[0]] * speaker_scenes['single'][key[1]]
+
+                    delta = n_ij - _n_ij
+
+                    new_row.append(float("{:4.2f}".format(delta)))
+
+                else:
+                    new_row.append("-")
+
+            probability_matrix.append(new_row)
+
+        couple_count = {}
+        for key, v in speaker_scenes['couple'].iteritems():
+            if key[0].replace(".", "") not in couple_count:
+                couple_count[key[0].replace(".", "")] = {}
+            if key[1].replace(".", "") not in couple_count:
+                couple_count[key[1].replace(".", "")] = {}
+
+            couple_count[key[0].replace(".", "")][key[1].replace(".", "")] = v
+            couple_count[key[1].replace(".", "")][key[0].replace(".", "")] = v
+        speaker_scenes['couple'] = couple_count
+
+        for key, v in speaker_scenes['single'].iteritems():
+            if "." in key:
+                speaker_scenes['single'][key.replace(".", "")] = v
+                del speaker_scenes['single'][key]
+
+
+        self._speaker_probabilities = speaker_scenes
+        self._probability_matrix = probability_matrix
+
+
