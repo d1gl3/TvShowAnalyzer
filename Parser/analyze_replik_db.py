@@ -222,10 +222,10 @@ def calculate_tv_show_stats():
 
     tv_show_coll.insert(tv_show)
 
-    for speaker in speakers:
-        speaker["_id"] = speaker["name"]
+    #for speaker in speakers:
+    #    speaker["_id"] = speaker["name"]
 
-        speaker_coll.insert(speaker)
+    #    speaker_coll.insert(speaker)
 
 
 def store_speakers_as_separate_objects():
