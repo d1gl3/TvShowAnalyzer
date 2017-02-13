@@ -379,4 +379,4 @@ if __name__ == "__main__":
     #  takes longer, execute separately
     calculate_speaker_word_lists()
     extract_speaker_hamming_distances()
-    #add_episode_titles()
+    add_episode_titles()

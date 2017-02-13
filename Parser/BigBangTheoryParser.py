@@ -142,7 +142,7 @@ class BigBangTheoryParser:
             '_id': 'transkript_%s_%s' % (parser.season, parser.episode)
         }
 
-        #parser.transkript_coll.insert(transkript)
+        parser.transkript_coll.insert(transkript)
         requests.post("http://localhost:8080/api/post_replik", json=parser.replik_list,
                       headers={"content-type": "application/json"})
 
