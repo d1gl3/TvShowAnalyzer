@@ -26,7 +26,7 @@ class Scene(BaseModel):
         }
 
     def add_replica(self, replik_length):
-        if replik_length in self._replicasLength_List:
+        if "_%s" % replik_length in self._replicasLength_List:
             self._replicasLength_List["_%s" % replik_length] += 1
         else:
             self._replicasLength_List["_%s" % replik_length] = 1
