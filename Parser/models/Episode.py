@@ -187,12 +187,13 @@ class Episode(BaseModel):
                     elif link[1] in speaker[k.INDEPENDENT]:
                         type = k.INDEPENDENT
 
-            calc_links.append({
-                'source': link[0],
-                'target': link[1],
-                'weight': int(link[2]),
-                'type': type
-            })
+            if type != k.ALTERNATIVE:
+                calc_links.append({
+                    'source': link[0],
+                    'target': link[1],
+                    'weight': int(link[2]),
+                    'type': type
+                })
 
         force_directed_data['links'] = calc_links
 

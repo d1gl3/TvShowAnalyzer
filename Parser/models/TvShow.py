@@ -150,13 +150,15 @@ class TvShow(BaseModel):
 
                 if relation_tuple not in relations:
                     relations[relation_tuple] = {
-                        link[k.TYPE]: 1
+                        link[k.TYPE]: 1,
+                        'encounters': link[k.WEIGHT]
                     }
                 else:
                     if link[k.TYPE] in relations[relation_tuple]:
                         relations[relation_tuple][link[k.TYPE]] += 1
                     else:
                         relations[relation_tuple][link[k.TYPE]] = 1
+                    relations[relation_tuple]['encounters'] += link[k.WEIGHT]
 
         calc_links = []
 
@@ -175,6 +177,7 @@ class TvShow(BaseModel):
                 old_relation[k.INDEPENDENT] = old_relation.get(k.INDEPENDENT, 0) + relation.get(k.INDEPENDENT, 0)
                 old_relation[k.CONCOMIDANT] = old_relation.get(k.CONCOMIDANT, 0) + relation.get(k.CONCOMIDANT, 0)
                 old_relation[k.ALTERNATIVE] = old_relation.get(k.ALTERNATIVE, 0) + relation.get(k.ALTERNATIVE, 0)
+                old_relation['encounters'] = old_relation['encounters'] + relation['encounters']
 
                 old_rel_dom = old_relation.get(k.DOMINATING, 0)
                 old_rel_sub = old_relation.get(k.SUBORDINATING, 0)
@@ -190,7 +193,16 @@ class TvShow(BaseModel):
                 print "xxx"
 
         for speakers, relation in new_relations_dict.iteritems():
-            relation_name = max(relation.iteritems(), key=operator.itemgetter(1))[0]
+
+            max_relation_name = max(relation.iteritems(), key=operator.itemgetter(1))[0]
+            relation_name = max_relation_name if relation[max_relation_name] > 0 else k.ALTERNATIVE
+
+            if relation_name == 'encounters':
+                rels = sorted(((v, key) for key, v in relation.items()))
+                relation_name = rels[-2][1] if rels[-2][1] != 'encounters' else rels[-1][1]
+
+            if speakers[0] not in k.TOP_20_NAMES or speakers[1] not in k.TOP_20_NAMES or relation_name == k.ALTERNATIVE:
+                continue
 
             for speaker in speakers:
                 if speaker not in force_directed_data[k.NODES]:
@@ -208,7 +220,7 @@ class TvShow(BaseModel):
             calc_links.append({
                 k.SOURCE: speakers[0],
                 k.TARGET: speakers[1],
-                k.WEIGHT: weight,
+                k.WEIGHT: relation['encounters'],
                 k.TYPE: relation_name
             })
 

@@ -75,11 +75,10 @@ class BaseModel:
                     speaker_a[k.DOMINATING].append(speaker_b[k.NAME])
                 elif set(_appears_in_a) < set(_appears_in_b):
                     speaker_a[k.SUBORDINATING].append(speaker_b[k.NAME])
+                elif not any(i in _appears_in_a for i in _appears_in_b):
+                    speaker_a[k.ALTERNATIVE].append(speaker_b[k.NAME])
                 else:
                     speaker_a[k.INDEPENDENT].append(speaker_b[k.NAME])
-
-                if not any(i in _appears_in_a for i in _appears_in_b):
-                    speaker_a[k.ALTERNATIVE].append(speaker_b[k.NAME])
 
             updated_speakers.append(speaker_a)
         self._speakers = updated_speakers
