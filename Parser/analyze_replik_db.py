@@ -177,7 +177,7 @@ def calculate_season_stats():
         episodes = episode_coll.find({k.SEASON_NUMBER: old_season[k.SEASON_NUMBER]})
         updated_season.calculate_speaker_probabilities(list(episodes))
 
-        season_coll.update({'_id': _id}, updated_season.get_json())
+        #season_coll.update({'_id': _id}, updated_season.get_json())
 
 
 def calculate_tv_show_stats():
@@ -222,9 +222,9 @@ def calculate_tv_show_stats():
 
     tv_show_coll.insert(tv_show)
 
-    for speaker in speakers:
-        speaker["_id"] = speaker["name"]
-        speaker_coll.insert(speaker)
+    #for speaker in speakers:
+    #    speaker["_id"] = speaker["name"]
+    #    speaker_coll.insert(speaker)
 
 
 def store_speakers_as_separate_objects():
@@ -302,6 +302,7 @@ def calculate_speaker_word_lists():
             })
 
         speaker['word_cloud_data'] = speaker_top_100_dict_list
+        speaker['words'] = speaker_words
         speaker['negative_words_cloud'] = speaker_top_100_neg_dict_list
         speaker['positive_words_cloud'] = speaker_top_100_pos_dict_list
         speaker['names_called'] = speaker_top_5_name_dict_list
@@ -371,12 +372,12 @@ def add_episode_titles():
 
 if __name__ == "__main__":
     print "successfully invoked script"
-    calculate_scene_stats()
-    calculate_episode_stats()
+    #calculate_scene_stats()
+    #calculate_episode_stats()
     calculate_season_stats()
-    calculate_tv_show_stats()
+    #calculate_tv_show_stats()
     #store_speakers_as_separate_objects()
     #  takes longer, execute separately
-    calculate_speaker_word_lists()
-    extract_speaker_hamming_distances()
-    add_episode_titles()
+    #calculate_speaker_word_lists()
+    #extract_speaker_hamming_distances()
+    #add_episode_titles()

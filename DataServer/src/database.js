@@ -28,7 +28,7 @@ module.exports = function (db_connection_string) {
         var success_list = [];
 
         for (var el in data_list) {
-            if (data_list.hasOwnProperty(el)){
+            if (data_list.hasOwnProperty(el)) {
 
                 var data = data_list[el];
                 data._id = data.season_number + "_" + data.episode_number + "_" + data.scene_number + "_" + data.replik_number;
@@ -57,7 +57,7 @@ module.exports = function (db_connection_string) {
                     season_number: data.season_number,
                     episode_number: data.episode_number
                 };
-                
+
                 coll.getEpisodeCollection().insert(episode, function (err) {
                     if (err) {
                         console.log("Episode " + data.season_number + " already exists");
@@ -105,6 +105,30 @@ module.exports = function (db_connection_string) {
             else {
                 res.statusCode = 200;
                 callback(null, doc, res);
+            }
+        });
+    };
+
+    module.get_speeches_by_speaker = function (req, res, callback) {
+        var speaker = req.query.speaker,
+            season = req.query.season,
+            episode = req.query.episode,
+            request_dict = {};
+
+        if (typeof speaker !== 'undefined') request_dict["speaker"] = speaker;
+        if (typeof season !== 'undefined') request_dict["season_number"] = Number(season);
+        if (typeof episode !== 'undefined') request_dict["episode_number"] = Number(episode);
+
+        console.log(request_dict);
+
+        coll.getReplikCollection().find(request_dict).toArray(function (err, docs) {
+            if (err) {
+                res.statusCode = 400;
+                callback(err, null, res);
+            }
+            else {
+                res.statusCode = 200;
+                callback(null, docs, res);
             }
         });
     };

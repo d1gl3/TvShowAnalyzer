@@ -69,6 +69,10 @@ module.exports = function (db_connection_string, db_name, db_fs) {
         database_functions.get_all_seasons(req, res, response_handler);
     });
 
+    router.get('/api/speeches', function (req, res) {
+        database_functions.get_speeches_by_speaker(req,res, response_handler);
+    });
+
     module.router = router;
 
     return module;
