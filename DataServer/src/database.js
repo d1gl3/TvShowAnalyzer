@@ -109,6 +109,26 @@ module.exports = function (db_connection_string) {
         });
     };
 
+    module.get_transcript = function (req, res, callback) {
+        var season = req.query.season,
+            episode = req.query.episode,
+            request_dict = {};
+
+        if (typeof season !== 'undefined') request_dict["season_number"] = Number(season);
+        if (typeof episode !== 'undefined') request_dict["episode_number"] = Number(episode);
+
+        coll.getTranscriptCollection().findOne(request_dict, function (err, doc) {
+            if (err) {
+                res.statusCode = 400;
+                callback(err, null, res);
+            }
+            else {
+                res.statusCode = 200;
+                callback(null, doc, res);
+            }
+        });
+    };
+
     module.get_speeches_by_speaker = function (req, res, callback) {
         var speaker = req.query.speaker,
             season = req.query.season,

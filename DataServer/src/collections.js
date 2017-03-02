@@ -28,5 +28,9 @@ module.exports = function (db) {
         return _db.collection('speaker_collection');
     };
 
+    module.getTranscriptCollection = function () {
+        return _db.collection('transkript_collection');
+    };
+
     return module;
 };
