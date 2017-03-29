@@ -113,10 +113,10 @@ class Episode(BaseModel):
 
         ones = 0
 
-        for i in range(1, len(self._configuration_matrix)):
-            row = self._configuration_matrix[i]
+        for i in range(0, len(self._configuration_matrix)):
+            row = self._configuration_matrix[i][1:]
 
-            ones += row[1:].count(1)
+            ones += row.count(1)
 
         self._configuration_density = float(ones) / (self._number_of_scenes * len(self._speakers))
 
@@ -261,10 +261,9 @@ class Episode(BaseModel):
                     n_ij = speaker_scenes['couple'].get(key)
 
                     if not n_ij:
-                        new_row.append("x")
-                        continue
+                        n_ij = 0
 
-                    _n_ij = number_of_scenes_total * speaker_scenes['single'][key[0]] * speaker_scenes['single'][key[1]]
+                    _n_ij = float(number_of_scenes_total) * speaker_scenes['single'][key[0]] * speaker_scenes['single'][key[1]]
 
                     delta = n_ij - _n_ij
 
